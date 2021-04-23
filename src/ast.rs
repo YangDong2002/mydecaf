@@ -16,5 +16,11 @@ pub enum Stmt<'a> {
 
 #[derive(Debug)]
 pub enum Expr<'a> {
-    Int(i32, std::marker::PhantomData<&'a ()>)
+	Int(i32, std::marker::PhantomData<&'a ()>),
+    Unary(UnaryOp, Box< Expr<'a> >)
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum UnaryOp {
+	UNeg, UNot, UBNot
 }

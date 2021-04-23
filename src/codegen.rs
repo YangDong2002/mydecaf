@@ -1,5 +1,5 @@
 use std::io::{Result, Write};
-use crate::ir::*;
+use crate::{ir::*, ast::UnaryOp::*};
 pub fn write_asm(p: &IrProg, w: &mut impl Write) -> Result<()> {
     let f = &p.func;
     writeln!(w, ".global {}", f.name)?;
@@ -12,6 +12,11 @@ pub fn write_asm(p: &IrProg, w: &mut impl Write) -> Result<()> {
                 writeln!(w, "  sw t0, -4(sp)")?;
                 writeln!(w, "  add sp, sp, -4")?;
             }
+			IrStmt::Unary(op) => {
+				writeln!(w, "  lw t0, 0(sp)")?;
+				writeln!(w, "  {} t0, t0", match op { UNeg => "neg", UNot => "seqz", UBNot => "not"})?;
+				writeln!(w, "  sw t0, 0(sp)")?;
+			}
             IrStmt::Ret => {
                 writeln!(w, "  lw a0, 0(sp)")?;
                 writeln!(w, "  add sp, sp, 4")?;

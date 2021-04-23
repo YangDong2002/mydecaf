@@ -4,7 +4,9 @@ pub mod ir;
 pub mod codegen;
 
 pub fn run(input: &str, output: &mut impl std::io::Write) -> std::io::Result<()> {
-    let p = parser::Parser{}.parse(&mut parser::Lexer::new(input.as_bytes())).expect("failed to parse input");
+	let mut p = parser::Lexer::new(input.as_bytes());
+    let p = parser::Parser{}.parse(&mut p).expect("failed to parse input");
+	eprintln!("Parser output:\n{:#?}", p);
     let p = ir::ast2ir(&p);
     codegen::write_asm(&p, output)
 }
