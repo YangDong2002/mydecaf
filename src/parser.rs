@@ -1,4 +1,4 @@
-use crate::ast::{*, UnaryOp::*};
+use crate::ast::*;
 
 pub struct Parser {}
 
@@ -11,7 +11,11 @@ impl<'p> Token<'p> {
 
 #[parser_macros::lalr1(Prog)]
 #[lex=r#"
-priority = []
+priority = [
+    { assoc = 'left', terms = ['Add', 'Sub'] },
+    { assoc = 'left', terms = ['Mul', 'Div', 'Mod'] },
+    { assoc = 'no_assoc', terms = ['UNeg', 'UNot', 'UBNot'] }
+]
 
 [lexical]
 'int' = 'Int'
@@ -21,7 +25,11 @@ priority = []
 '\)' = 'RPar'
 '\{' = 'LBrc'
 '\}' = 'RBrc'
-'-' = 'UNeg'
+'\+' = 'Add'
+'-' = 'Sub'
+'\*' = 'Mul'
+'/' = 'Div'
+'%' = 'Mod'
 '!' = 'UNot'
 '~' = 'UBNot'
 '\s+' = '_Eps'
@@ -38,12 +46,55 @@ impl<'p> Parser {
     }
     #[rule = "Stmt -> Return Expr Semi"]
     fn stmt_ret(_r: Token, e: Expr<'p>, _s: Token) -> Stmt<'p> { Stmt::Ret(e) }
-    #[rule = "Expr -> IntConst"]
-    fn expr_int(i: Token) -> Expr<'p> { Expr::Int(i.parse(), std::marker::PhantomData) }
-    #[rule = "Expr -> UNeg Expr"]
-    fn expr_uadd(_a: Token, e: Expr<'p>) -> Expr<'p> { Expr::Unary(UNeg, Box::new(e)) }
-    #[rule = "Expr -> UNot Expr"]
-    fn expr_uadd(_a: Token, e: Expr<'p>) -> Expr<'p> { Expr::Unary(UNot, Box::new(e)) }
-    #[rule = "Expr -> UBNot Expr"]
-    fn expr_uadd(_a: Token, e: Expr<'p>) -> Expr<'p> { Expr::Unary(UBNot, Box::new(e)) }
+    #[rule = "Expr -> Additive"]
+    fn expr_additive(a: Additive<'p>) -> Expr<'p> { Expr::Add(a) }
+    #[rule = "Additive -> Multiplicative"]
+    fn addi_mul(m: Multiplicative<'p>) -> Additive<'p> { Additive::Mul(m) }
+    #[rule = "Additive -> Additive Add Multiplicative"]
+    fn addi_bop(adt: Additive<'p>, _: Token, mlt: Multiplicative<'p>) -> Additive<'p> {
+        Additive::Bop(Box::new(adt), BinaryOp::Add, mlt)
+    }
+    #[rule = "Additive -> Additive Sub Multiplicative"]
+    fn addi_bop(adt: Additive<'p>, _: Token, mlt: Multiplicative<'p>) -> Additive<'p> {
+        Additive::Bop(Box::new(adt), BinaryOp::Sub, mlt)
+    }
+    #[rule = "Multiplicative -> Unary"]
+    fn mult_u(u: Unary<'p>) -> Multiplicative<'p> { Multiplicative::U(u) }
+    #[rule = "Multiplicative -> Multiplicative Mul Unary"]
+    fn mult_mul(m: Multiplicative<'p>, _: Token, u: Unary<'p>) -> Multiplicative<'p> {
+        Multiplicative::Mul(Box::new(m), BinaryOp::Mul, u)
+    }
+    #[rule = "Multiplicative -> Multiplicative Div Unary"]
+    fn mult_mul(m: Multiplicative<'p>, _: Token, u: Unary<'p>) -> Multiplicative<'p> {
+        Multiplicative::Mul(Box::new(m), BinaryOp::Div, u)
+    }
+    #[rule = "Multiplicative -> Multiplicative Mod Unary"]
+    fn mult_mul(m: Multiplicative<'p>, _: Token, u: Unary<'p>) -> Multiplicative<'p> {
+        Multiplicative::Mul(Box::new(m), BinaryOp::Mod, u)
+    }
+    #[rule = "Unary -> Primary"]
+    fn unary_p(p: Primary<'p>) -> Unary<'p> { Unary::Prim(p) }
+    #[rule = "Unary -> Sub Unary"]
+    #[prec = "UNeg"]
+    fn unary_neg(_: Token, u: Unary<'p>) -> Unary<'p> {
+        Unary::Uop(UnaryOp::UNeg, Box::new(u))
+    }
+    #[rule = "Unary -> UNot Unary"]
+    #[prec = "UNot"]
+    fn unary_not(_: Token, u: Unary<'p>) -> Unary<'p> {
+        Unary::Uop(UnaryOp::UNot, Box::new(u))
+    }
+    #[rule = "Unary -> UBNot Unary"]
+    #[prec = "UBNot"]
+    fn unary_bnot(_: Token, u: Unary<'p>) -> Unary<'p> {
+        Unary::Uop(UnaryOp::UBNot, Box::new(u))
+    }
+    #[rule = "Primary -> IntConst"]
+    fn prim_int(i: Token) -> Primary<'p> {
+        Primary::Int(i.parse(), std::marker::PhantomData)
+    }
+    #[rule = "Primary -> LPar Expr RPar"]
+    fn prim_par(_: Token, e: Expr<'p>, _: Token) -> Primary<'p> {
+        Primary::Braced(Box::new(e))
+    }
 }

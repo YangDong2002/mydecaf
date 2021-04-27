@@ -15,6 +15,7 @@ pub struct IrFunc<'a> {
 pub enum IrStmt {
     Const(i32),
 	Unary(UnaryOp),
+    Binary(BinaryOp),
     Ret
 }
 
@@ -33,11 +34,45 @@ fn func<'a>(f: &Func<'a>) -> IrFunc<'a> {
 }
 fn expr(stmts: &mut Vec<IrStmt>, e: &Expr) {
     match e {
-        Expr::Int(x, _) => stmts.push(IrStmt::Const(*x)),
-		Expr::Unary(op, x) => {
-			expr(stmts, x);
-			stmts.push(IrStmt::Unary(*op))
-		}
+        Expr::Add(a) => { additive(stmts, a); }
     }
 }
-
+fn additive(stmts: &mut Vec<IrStmt>, a: &Additive) {
+    match a {
+        Additive::Mul(m) => { multiplicative(stmts, m); },
+        Additive::Bop(a, op, b) => {
+            additive(stmts, &**a);
+            multiplicative(stmts, b);
+            stmts.push(IrStmt::Binary(*op));
+        }
+    }
+}
+fn multiplicative(stmts: &mut Vec<IrStmt>, m: &Multiplicative) {
+    match m {
+        Multiplicative::U(u) => unary(stmts, u),
+        Multiplicative::Mul(m, op, a) => {
+            multiplicative(stmts, &**m);
+            unary(stmts, a);
+            stmts.push(IrStmt::Binary(*op));
+        }
+    }
+}
+fn unary(stmts: &mut Vec<IrStmt>, u: &Unary) {
+    match u {
+        Unary::Prim(p) => primary(stmts, p),
+        Unary::Uop(op, v) => {
+            unary(stmts, v);
+            stmts.push(IrStmt::Unary(*op));
+        }
+    }
+}
+fn primary(stmts: &mut Vec<IrStmt>, p: &Primary) {
+    match p {
+        Primary::Int(i, _) => {
+            stmts.push(IrStmt::Const(*i));
+        }
+        Primary::Braced(e) => {
+            expr(stmts, e);
+        }
+    }
+}
