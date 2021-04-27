@@ -24,7 +24,22 @@ pub fn write_asm(p: &IrProg, w: &mut impl Write) -> Result<()> {
             IrStmt::Binary(op) => {
                 writeln!(w, "  lw t1, 4(sp)")?;
                 writeln!(w, "  lw t2, 0(sp)")?;
-                writeln!(w, "  {} t1, t1, t2", match op { Add => "add", Sub => "sub", Mul => "mul", Div => "div", Mod => "rem" })?;
+
+                writeln!(w, "{}", match op {
+						Add => "  add t1, t1, t2",
+						Sub => "  sub t1, t1, t2",
+						Mul => "  mul t1, t1, t2",
+						Div => "  div t1, t1, t2",
+						Mod => "  rem t1, t1, t2",
+						LOr => "  or t1, t1, t2\n  snez t1,t1",
+						LAnd => "  snez t1, t1\n  snez t2, t2\n  and t1, t1, t2",
+						Lt => "  slt t1, t1, t2",
+						Gt => "  slt t1, t2, t1",
+						Geq => "  slt t1, t1, t2\n  xor t1, t1, 1",
+						Leq => "  slt t1, t2, t1\n   xor t1, t1, 1",
+						Eqt => "  xor t1, t1, t2\n  seqz t1, t1",
+						Neq => "  xor t1, t1, t2\n  snez t1, t1"
+				})?;
                 writeln!(w, "  addi sp, sp, 4")?;
                 writeln!(w, "  sw t1, 0(sp)")?;
             }

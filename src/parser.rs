@@ -25,6 +25,14 @@ priority = [
 '\)' = 'RPar'
 '\{' = 'LBrc'
 '\}' = 'RBrc'
+'==' = 'Eq'
+'!=' = 'Neq'
+'>=' = 'Geq'
+'>' = 'Gt'
+'<=' = 'Leq'
+'<' = 'Lt'
+'\|\|' = 'LOr'
+'&&' = 'LAnd'
 '\+' = 'Add'
 '-' = 'Sub'
 '\*' = 'Mul'
@@ -46,8 +54,32 @@ impl<'p> Parser {
     }
     #[rule = "Stmt -> Return Expr Semi"]
     fn stmt_ret(_r: Token, e: Expr<'p>, _s: Token) -> Stmt<'p> { Stmt::Ret(e) }
-    #[rule = "Expr -> Additive"]
-    fn expr_additive(a: Additive<'p>) -> Expr<'p> { Expr::Add(a) }
+    #[rule = "Expr -> LogicalOr"]
+    fn expr_lor(o: LogicalOr<'p>) -> Expr<'p> { Expr::LOr(o) }
+	#[rule = "LogicalOr -> LogicalAnd"]
+	fn lor_land(a: LogicalAnd<'p>) -> LogicalOr<'p> { LogicalOr::LAnd(a) }
+	#[rule = "LogicalOr -> LogicalOr LOr LogicalAnd"]
+	fn lor_bop(a: LogicalOr<'p>, _: Token, b: LogicalAnd<'p>) -> LogicalOr<'p> { LogicalOr::Bop(Box::new(a), BinaryOp::LOr, b) }
+	#[rule = "LogicalAnd -> Equality"]
+	fn land_eqn(a: Equality<'p>) -> LogicalAnd<'p> { LogicalAnd::Eqn(a) }
+	#[rule = "LogicalAnd -> LogicalAnd LAnd Equality"]
+	fn land_bop(a: LogicalAnd<'p>, _: Token, b: Equality<'p>) -> LogicalAnd<'p> { LogicalAnd::Bop(Box::new(a), BinaryOp::LAnd, b) }
+	#[rule = "Equality -> Relational"]
+	fn eqn_rel(a: Relational<'p>) -> Equality<'p> { Equality::Rel(a) }
+	#[rule = "Equality -> Equality Eq Relational"]
+	fn eqn_beq(a: Equality<'p>, _: Token, b: Relational<'p>) -> Equality<'p> { Equality::Bop(Box::new(a), BinaryOp::Eqt, b) }
+	#[rule = "Equality -> Equality Neq Relational"]
+	fn eqn_bneq(a: Equality<'p>, _: Token, b: Relational<'p>) -> Equality<'p> { Equality::Bop(Box::new(a), BinaryOp::Neq, b) }
+	#[rule = "Relational -> Additive"]
+	fn rel_add(a: Additive<'p>) -> Relational<'p> { Relational::Add(a) }
+	#[rule = "Relational -> Relational Geq Additive"]
+	fn rel_bgeq(a: Relational<'p>, _: Token, b: Additive<'p>) -> Relational<'p> { Relational::Bop(Box::new(a), BinaryOp::Geq, b) }
+	#[rule = "Relational -> Relational Leq Additive"]
+	fn rel_bleq(a: Relational<'p>, _: Token, b: Additive<'p>) -> Relational<'p> { Relational::Bop(Box::new(a), BinaryOp::Leq, b) }
+	#[rule = "Relational -> Relational Gt Additive"]
+	fn rel_bgt(a: Relational<'p>, _: Token, b: Additive<'p>) -> Relational<'p> { Relational::Bop(Box::new(a), BinaryOp::Gt, b) }
+	#[rule = "Relational -> Relational Lt Additive"]
+	fn rel_blt(a: Relational<'p>, _: Token, b: Additive<'p>) -> Relational<'p> { Relational::Bop(Box::new(a), BinaryOp::Lt, b) }
     #[rule = "Additive -> Multiplicative"]
     fn addi_mul(m: Multiplicative<'p>) -> Additive<'p> { Additive::Mul(m) }
     #[rule = "Additive -> Additive Add Multiplicative"]

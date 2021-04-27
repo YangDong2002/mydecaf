@@ -34,9 +34,50 @@ fn func<'a>(f: &Func<'a>) -> IrFunc<'a> {
 }
 fn expr(stmts: &mut Vec<IrStmt>, e: &Expr) {
     match e {
-        Expr::Add(a) => { additive(stmts, a); }
+        Expr::LOr(a) => { logical_or(stmts, a); }
     }
 }
+fn logical_or(stmts: &mut Vec<IrStmt>, e: &LogicalOr) {
+	match e {
+		LogicalOr::LAnd(a) => { logical_and(stmts, a); }
+		LogicalOr::Bop(a, op, b) => {
+			logical_or(stmts, &**a);
+			logical_and(stmts, b);
+			stmts.push(IrStmt::Binary(*op));
+		}
+	}
+}
+fn logical_and(stmts: &mut Vec<IrStmt>, e: &LogicalAnd) {
+	match e {
+		LogicalAnd::Eqn(a) => { equality(stmts, a); }
+		LogicalAnd::Bop(a, op, b) => {
+			logical_and(stmts, &**a);
+			equality(stmts, b);
+			stmts.push(IrStmt::Binary(*op));
+		}
+	}
+}
+fn equality(stmts: &mut Vec<IrStmt>, e: &Equality) {
+	match e {
+		Equality::Rel(a) => { relational(stmts, a); }
+		Equality::Bop(a, op, b) => {
+			equality(stmts, &**a);
+			relational(stmts, b);
+			stmts.push(IrStmt::Binary(*op));
+		}
+	}
+}
+fn relational(stmts: &mut Vec<IrStmt>, e: &Relational) {
+	match e {
+		Relational::Add(a) => { additive(stmts, a); }
+		Relational::Bop(a, op, b) => {
+			relational(stmts, &**a);
+			additive(stmts, b);
+			stmts.push(IrStmt::Binary(*op));
+		}
+	}
+}
+
 fn additive(stmts: &mut Vec<IrStmt>, a: &Additive) {
     match a {
         Additive::Mul(m) => { multiplicative(stmts, m); },

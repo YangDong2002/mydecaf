@@ -16,7 +16,27 @@ pub enum Stmt<'a> {
 
 #[derive(Debug)]
 pub enum Expr<'a> {
-    Add(Additive<'a>)
+    LOr(LogicalOr<'a>)
+}
+#[derive(Debug)]
+pub enum LogicalOr<'a> {
+	LAnd(LogicalAnd<'a>),
+	Bop(Box< LogicalOr<'a> >, BinaryOp, LogicalAnd<'a>)
+}
+#[derive(Debug)]
+pub enum LogicalAnd<'a> {
+	Eqn(Equality<'a>),
+	Bop(Box< LogicalAnd<'a> >, BinaryOp, Equality<'a>)
+}
+#[derive(Debug)]
+pub enum Equality<'a> {
+	Rel(Relational<'a>),
+	Bop(Box< Equality<'a> >, BinaryOp, Relational<'a>)
+}
+#[derive(Debug)]
+pub enum Relational<'a> {
+	Add(Additive<'a>),
+	Bop(Box< Relational<'a> >, BinaryOp, Additive<'a>)
 }
 
 #[derive(Debug)]
@@ -49,5 +69,5 @@ pub enum UnaryOp {
 }
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum BinaryOp {
-    Add, Sub, Mul, Div, Mod
+    Add, Sub, Mul, Div, Mod, LOr, LAnd, Geq, Gt, Leq, Lt, Eqt, Neq
 }
