@@ -10,13 +10,20 @@ pub fn write_asm(p: &IrProg, w: &mut impl Write) -> Result<()> {
     }
     writeln!(w, ".global {}", f.name)?;
     writeln!(w, "{}:", f.name)?;
+
+    let frame_size = (f.locals * 4 + 8) as i32;
+    writeln!(w, "  addi sp, sp, {}", -frame_size)?;
+    writeln!(w, "  sw ra, {}(sp)", frame_size - 4)?;
+    writeln!(w, "  sw fp, {}(sp)", frame_size - 8)?;
+    writeln!(w, "  addi fp, fp, {}", frame_size)?;
+
     for s in &f.stmts {
         writeln!(w, "  # {:?}", s)?;
         match s {
             IrStmt::Const(x) => {
                 writeln!(w, "  li t0, {}", x)?;
                 writeln!(w, "  sw t0, -4(sp)")?;
-                writeln!(w, "  add sp, sp, -4")?;
+                writeln!(w, "  addi sp, sp, -4")?;
             }
             IrStmt::Unary(op) => {
                 writeln!(w, "  lw t0, 0(sp)")?;
@@ -52,9 +59,36 @@ pub fn write_asm(p: &IrProg, w: &mut impl Write) -> Result<()> {
             IrStmt::Ret => {
                 writeln!(w, "  lw a0, 0(sp)")?;
                 writeln!(w, "  add sp, sp, 4")?;
-                writeln!(w, "  ret")?;
+                writeln!(w, "  j {}_epilogue", f.name)?;
+            }
+            IrStmt::FrameAddr(a) => {
+                writeln!(w, "  addi t0, fp, {}", -12 - (*a as i32) * 4)?;
+                writeln!(w, "  sw t0, -4(sp)")?;
+                writeln!(w, "  addi sp, sp, -4")?;
+            }
+            IrStmt::Load => {
+                writeln!(w, "  lw t0, 0(sp)")?;
+                writeln!(w, "  lw t1, 0(t0)")?;
+                writeln!(w, "  sw t1, 0(sp)")?;
+            }
+            IrStmt::Store => {
+                writeln!(w, "  lw t0, 0(sp)")?;
+                writeln!(w, "  lw t1, 4(sp)")?;
+                writeln!(w, "  sw t1, 0(t0)")?;
+                writeln!(w, "  addi sp, sp, 4")?;
+            }
+            IrStmt::Pop => {
+                writeln!(w, "  addi sp, sp, 4")?;
             }
         }
     }
+    writeln!(w, "  push 0")?;
+    writeln!(w, "{}_epilogue:", f.name)?;
+    writeln!(w, "  lw a0, 0(sp)")?;
+    writeln!(w, "  addi sp, sp, 4")?;
+    writeln!(w, "  lw fp, {}(sp)", frame_size - 8)?;
+    writeln!(w, "  lw ra, {}(sp)", frame_size - 4)?;
+    writeln!(w, "  addi sp, sp, {}", frame_size)?;
+    writeln!(w, "  jr ra")?;
     Ok(())
 }

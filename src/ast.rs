@@ -1,22 +1,36 @@
 #[derive(Debug)]
 pub struct Prog<'a> {
-    pub func: Func<'a>
+    pub func: Func<'a>,
 }
 
 #[derive(Debug)]
 pub struct Func<'a> {
     pub name: &'a str,
-    pub stmt: Stmt<'a>,
+    pub stmts: Stmts<'a>,
+}
+
+#[derive(Debug)]
+pub struct Stmts<'a> {
+    pub stmts: Vec<Stmt<'a>>,
 }
 
 #[derive(Debug)]
 pub enum Stmt<'a> {
-    Ret(Expr<'a>)
+    Ret(Expr<'a>),
+    MaybeExpr(Option<Expr<'a>>),
+    Declaration(Declaration<'a>),
+}
+
+#[derive(Debug)]
+pub struct Declaration<'a> {
+    pub name: &'a str,
+    pub val: Option<Expr<'a>>,
 }
 
 #[derive(Debug)]
 pub enum Expr<'a> {
-    LOr(LogicalOr<'a>)
+    LOr(LogicalOr<'a>),
+    Assign(&'a str, Box<Expr<'a>>),
 }
 
 #[derive(Debug)]
@@ -65,6 +79,7 @@ pub enum Unary<'a> {
 pub enum Primary<'a> {
     Int(i32, std::marker::PhantomData<&'a ()>),
     Braced(Box<Expr<'a>>),
+    Identifier(&'a str),
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

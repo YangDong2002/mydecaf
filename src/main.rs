@@ -1,3 +1,9 @@
+mod parser;
+mod ast;
+mod ir;
+mod codegen;
+
+
 fn main() -> std::io::Result<()> {
     let path;
     match std::env::args().nth(1) {
