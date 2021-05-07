@@ -8,20 +8,21 @@ pub struct IrProg<'a> {
 #[derive(Debug)]
 pub struct IrFunc<'a> {
     pub name: &'a str,
-    pub stmts: Vec<IrStmt>
+    pub stmts: Vec<IrStmt>,
 }
 
 #[derive(Debug)]
 pub enum IrStmt {
     Const(i32),
-	Unary(UnaryOp),
+    Unary(UnaryOp),
     Binary(BinaryOp),
-    Ret
+    Ret,
 }
 
 pub fn ast2ir<'a>(p: &'a Prog<'a>) -> IrProg<'a> {
     IrProg { func: func(&p.func) }
 }
+
 fn func<'a>(f: &Func<'a>) -> IrFunc<'a> {
     let mut stmts = Vec::new();
     match &f.stmt {
@@ -32,55 +33,60 @@ fn func<'a>(f: &Func<'a>) -> IrFunc<'a> {
     }
     IrFunc { name: f.name, stmts }
 }
+
 fn expr(stmts: &mut Vec<IrStmt>, e: &Expr) {
     match e {
         Expr::LOr(a) => { logical_or(stmts, a); }
     }
 }
+
 fn logical_or(stmts: &mut Vec<IrStmt>, e: &LogicalOr) {
-	match e {
-		LogicalOr::LAnd(a) => { logical_and(stmts, a); }
-		LogicalOr::Bop(a, op, b) => {
-			logical_or(stmts, &**a);
-			logical_and(stmts, b);
-			stmts.push(IrStmt::Binary(*op));
-		}
-	}
+    match e {
+        LogicalOr::LAnd(a) => { logical_and(stmts, a); }
+        LogicalOr::Bop(a, op, b) => {
+            logical_or(stmts, &**a);
+            logical_and(stmts, b);
+            stmts.push(IrStmt::Binary(*op));
+        }
+    }
 }
+
 fn logical_and(stmts: &mut Vec<IrStmt>, e: &LogicalAnd) {
-	match e {
-		LogicalAnd::Eqn(a) => { equality(stmts, a); }
-		LogicalAnd::Bop(a, op, b) => {
-			logical_and(stmts, &**a);
-			equality(stmts, b);
-			stmts.push(IrStmt::Binary(*op));
-		}
-	}
+    match e {
+        LogicalAnd::Eqn(a) => { equality(stmts, a); }
+        LogicalAnd::Bop(a, op, b) => {
+            logical_and(stmts, &**a);
+            equality(stmts, b);
+            stmts.push(IrStmt::Binary(*op));
+        }
+    }
 }
+
 fn equality(stmts: &mut Vec<IrStmt>, e: &Equality) {
-	match e {
-		Equality::Rel(a) => { relational(stmts, a); }
-		Equality::Bop(a, op, b) => {
-			equality(stmts, &**a);
-			relational(stmts, b);
-			stmts.push(IrStmt::Binary(*op));
-		}
-	}
+    match e {
+        Equality::Rel(a) => { relational(stmts, a); }
+        Equality::Bop(a, op, b) => {
+            equality(stmts, &**a);
+            relational(stmts, b);
+            stmts.push(IrStmt::Binary(*op));
+        }
+    }
 }
+
 fn relational(stmts: &mut Vec<IrStmt>, e: &Relational) {
-	match e {
-		Relational::Add(a) => { additive(stmts, a); }
-		Relational::Bop(a, op, b) => {
-			relational(stmts, &**a);
-			additive(stmts, b);
-			stmts.push(IrStmt::Binary(*op));
-		}
-	}
+    match e {
+        Relational::Add(a) => { additive(stmts, a); }
+        Relational::Bop(a, op, b) => {
+            relational(stmts, &**a);
+            additive(stmts, b);
+            stmts.push(IrStmt::Binary(*op));
+        }
+    }
 }
 
 fn additive(stmts: &mut Vec<IrStmt>, a: &Additive) {
     match a {
-        Additive::Mul(m) => { multiplicative(stmts, m); },
+        Additive::Mul(m) => { multiplicative(stmts, m); }
         Additive::Bop(a, op, b) => {
             additive(stmts, &**a);
             multiplicative(stmts, b);
@@ -88,6 +94,7 @@ fn additive(stmts: &mut Vec<IrStmt>, a: &Additive) {
         }
     }
 }
+
 fn multiplicative(stmts: &mut Vec<IrStmt>, m: &Multiplicative) {
     match m {
         Multiplicative::U(u) => unary(stmts, u),
@@ -98,6 +105,7 @@ fn multiplicative(stmts: &mut Vec<IrStmt>, m: &Multiplicative) {
         }
     }
 }
+
 fn unary(stmts: &mut Vec<IrStmt>, u: &Unary) {
     match u {
         Unary::Prim(p) => primary(stmts, p),
@@ -107,6 +115,7 @@ fn unary(stmts: &mut Vec<IrStmt>, u: &Unary) {
         }
     }
 }
+
 fn primary(stmts: &mut Vec<IrStmt>, p: &Primary) {
     match p {
         Primary::Int(i, _) => {
