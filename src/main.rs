@@ -1,7 +1,3 @@
-mod parser;
-mod ast;
-mod ir;
-mod codegen;
 
 
 fn main() -> std::io::Result<()> {

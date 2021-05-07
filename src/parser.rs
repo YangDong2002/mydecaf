@@ -1,6 +1,6 @@
 use crate::ast::*;
 
-pub struct Parser {}
+pub struct Parser;
 
 impl<'p> Token<'p> {
     fn str(&self) -> &'p str { std::str::from_utf8(self.piece).unwrap() }

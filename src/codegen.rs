@@ -82,7 +82,8 @@ pub fn write_asm(p: &IrProg, w: &mut impl Write) -> Result<()> {
             }
         }
     }
-    writeln!(w, "  push 0")?;
+    writeln!(w, "  sw x0, -4(sp)")?;
+    writeln!(w, "  addi sp, sp, -4")?;
     writeln!(w, "{}_epilogue:", f.name)?;
     writeln!(w, "  lw a0, 0(sp)")?;
     writeln!(w, "  addi sp, sp, 4")?;
