@@ -115,6 +115,7 @@ fn statement<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, st: &Stmt<'a>) 
             stmts.push(IrStmt::Label(no)); // continue
             if let Some(x) = update {
                 expr(stmts, ctx, &*x);
+                stmts.push(IrStmt::Pop);
             }
             if let Some(x) = cond {
                 expr(stmts, ctx, &*x);
