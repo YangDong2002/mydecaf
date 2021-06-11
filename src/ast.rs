@@ -19,7 +19,8 @@ pub enum BlockItem<'a> {
 pub enum Stmt<'a> {
     Ret(Expr<'a>),
     MaybeExpr(Option<Expr<'a>>),
-    If(Expr<'a>, Box<Stmt<'a>>, Option<Box<Stmt<'a>>>)
+    If(Expr<'a>, Box<Stmt<'a>>, Option<Box<Stmt<'a>>>),
+    Compound(Box<Vec<BlockItem<'a>>>),
 }
 
 #[derive(Debug)]

@@ -52,10 +52,12 @@ priority = [
 impl<'p> Parser {
     #[rule = "Prog -> Func"]
     fn prog(func: Func<'p>) -> Prog<'p> { Prog { func } }
-    #[rule = "Func -> Int Id LPar RPar LBrc BlockItems RBrc"]
-    fn func(_i: Token, name: Token, _lp: Token, _rp: Token, _lb: Token, stmts: Vec<BlockItem<'p>>, _rb: Token) -> Func<'p> {
+    #[rule = "Func -> Int Id LPar RPar Compound"]
+    fn func(_i: Token, name: Token, _lp: Token, _rp: Token, stmts: Vec<BlockItem<'p>>) -> Func<'p> {
         Func { name: name.str(), stmts }
     }
+    #[rule = "Compound -> LBrc BlockItems RBrc"]
+    fn compound(_l: Token, blk: Vec<BlockItem<'p>>, _r: Token) -> Vec<BlockItem<'p>> { blk }
     #[rule = "BlockItems ->"]
     fn block_empty() -> Vec<BlockItem<'p>> { vec![] }
     #[rule = "BlockItems -> BlockItems BlockItem"]
@@ -66,6 +68,8 @@ impl<'p> Parser {
     fn block_stmt(stmt: Stmt<'p>) -> BlockItem<'p> { BlockItem::Stmt(stmt) }
     #[rule = "BlockItem -> Declaration"]
     fn block_decl(x: Declaration<'p>) -> BlockItem<'p> { BlockItem::Decl(x) }
+    #[rule = "Stmt -> Compound"]
+    fn stmt_compound(blk: Vec<BlockItem<'p>>) -> Stmt<'p> { Stmt::Compound(Box::new(blk)) }
     #[rule = "Stmt -> Return Expr Semi"]
     fn stmt_ret(_r: Token, e: Expr<'p>, _s: Token) -> Stmt<'p> { Stmt::Ret(e) }
     #[rule = "Stmt -> MaybeExpr Semi"]

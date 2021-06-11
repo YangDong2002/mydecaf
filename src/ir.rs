@@ -16,8 +16,20 @@ pub struct IrFunc<'a> {
 
 #[derive(Debug)]
 pub struct Context<'a> {
-    pub vars: HashMap<&'a str, usize>,
+    pub vars: Vec<HashMap<&'a str, u32>>,
     pub label: u32,
+    pub depth: u32,
+}
+
+impl<'a> Context<'a> {
+    pub fn name_resolution(&self, name: &'a str) -> Option<u32> {
+        for mp in self.vars.iter().rev() {
+            if let Some(&x) = mp.get(name) {
+                return Some(x);
+            }
+        }
+        None
+    }
 }
 
 #[derive(Debug)]
@@ -26,7 +38,7 @@ pub enum IrStmt {
     Unary(UnaryOp),
     Binary(BinaryOp),
     Ret,
-    FrameAddr(usize),
+    FrameAddr(u32),
     Load,
     Store,
     Pop,
@@ -37,76 +49,90 @@ pub enum IrStmt {
 }
 
 impl<'a> Context<'a> {
-    pub fn new() -> Context<'a> { Context { vars: HashMap::new(), label: 0 } }
+    pub fn new() -> Context<'a> { Context { vars: vec![], label: 0, depth: 0 } }
 }
+
 pub fn ast2ir<'a>(p: &'a Prog<'a>) -> IrProg<'a> {
     let mut ctx = Context::new();
+    if p.func.name != "main" { panic!("No main function!") }
     IrProg { func: func(&p.func, &mut ctx) }
 }
 
 fn func<'a>(f: &Func<'a>, ctx: &mut Context<'a>) -> IrFunc<'a> {
     let mut stmts = Vec::new();
-    let mut locals = 0;
-    for x in &f.stmts {
-        if let BlockItem::Decl(_c) = x {
-            locals += 1;
-        }
-    }
-
-    for x in &f.stmts {
-        match x {
-            BlockItem::Stmt(st) => {
-                statement(&mut stmts, ctx, st);
-            }
-            BlockItem::Decl(e) => {
-                if ctx.vars.contains_key(e.name) {
-                    panic!("Variable {} is defined twice", e.name);
-                } else {
-                    ctx.vars.insert(e.name, ctx.vars.len());
-                    if let Some(x) = &e.val {
-                        expr(&mut stmts, ctx, &x);
-                        stmts.push(IrStmt::FrameAddr(*ctx.vars.get(e.name).unwrap()));
-                        stmts.push(IrStmt::Store);
-                        stmts.push(IrStmt::Pop);
-                    }
-                }
-            }
-        }
-    }
+    let locals: u32 = compound(&mut stmts, ctx, &f.stmts);
     IrFunc { name: f.name, stmts, locals }
 }
 
-fn statement<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, st: &Stmt) {
+fn statement<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, st: &Stmt<'a>) -> u32 {
     match st {
         Stmt::Ret(r) => {
             expr(stmts, ctx, &r);
             stmts.push(IrStmt::Ret);
+            ctx.depth
         }
         Stmt::MaybeExpr(e) => {
             if let Some(x) = e {
                 expr(stmts, ctx, &x);
                 stmts.push(IrStmt::Pop);
             }
+            ctx.depth
         }
         Stmt::If(cond, if_expr, op) => {
             expr(stmts, ctx, cond);
             let no = ctx.label;
+            let mut max_depth: u32 = ctx.depth;
             if let Some(x) = op {
                 ctx.label = no + 2;
                 stmts.push(IrStmt::Beqz(no));
-                statement(stmts, ctx, &*if_expr);
+                max_depth = std::cmp::max(max_depth, statement(stmts, ctx, &*if_expr));
                 stmts.push(IrStmt::Br(no + 1));
                 stmts.push(IrStmt::Label(no));
-                statement(stmts, ctx, &*x);
+                max_depth = std::cmp::max(max_depth, statement(stmts, ctx, &*x));
                 stmts.push(IrStmt::Label(no + 1));
             } else {
                 ctx.label = no + 1;
                 stmts.push(IrStmt::Beqz(no));
-                statement(stmts, ctx, &*if_expr);
+                max_depth = std::cmp::max(max_depth, statement(stmts, ctx, &*if_expr));
                 stmts.push(IrStmt::Label(no));
+            }
+            max_depth
+        }
+        Stmt::Compound(com) => {
+            compound(stmts, ctx, &**com)
+        }
+    }
+}
+
+fn compound<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, com: &Vec<BlockItem<'a>>) -> u32 {
+    let mut max_depth = ctx.depth;
+    ctx.vars.push(HashMap::new());
+    for x in com {
+        match x {
+            BlockItem::Stmt(st) => {
+                max_depth = std::cmp::max(max_depth, statement(stmts, ctx, st));
+            }
+            BlockItem::Decl(e) => {
+                if ctx.vars.last().unwrap().contains_key(e.name) {
+                    panic!("Variable {} is defined twice", e.name);
+                } else {
+                    let id = ctx.depth;
+                    ctx.depth += 1;
+                    ctx.vars.last_mut().unwrap().insert(e.name, id);
+                    if let Some(x) = &e.val {
+                        expr(stmts, ctx, &x);
+                        stmts.push(IrStmt::FrameAddr(*ctx.vars.last().unwrap().get(e.name).unwrap()));
+                        stmts.push(IrStmt::Store);
+                        stmts.push(IrStmt::Pop);
+                    }
+                }
+                max_depth = std::cmp::max(max_depth, ctx.depth);
             }
         }
     }
+    ctx.depth -= ctx.vars.last().unwrap().len() as u32;
+    ctx.vars.pop();
+    max_depth
 }
 
 fn conditional<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, o: &Conditional) {
@@ -129,9 +155,9 @@ fn conditional<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, o: &Condition
 fn expr<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, e: &Expr) {
     match e {
         Expr::Assign(name, val) => {
-            if ctx.vars.contains_key(name) {
+            if let Some(x) = ctx.name_resolution(name) {
                 expr(stmts, ctx, &**val);
-                stmts.push(IrStmt::FrameAddr(*ctx.vars.get(name).unwrap()));
+                stmts.push(IrStmt::FrameAddr(x));
                 stmts.push(IrStmt::Store);
             } else {
                 panic!("Variable {} is assigned a value before declaration!", name);
@@ -228,7 +254,7 @@ fn primary<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, p: &Primary) {
             expr(stmts, ctx, e);
         }
         Primary::Identifier(name) => {
-            stmts.push(IrStmt::FrameAddr(*ctx.vars.get(name).expect(&format!("{} is referenced before definition!", name))));
+            stmts.push(IrStmt::FrameAddr(ctx.name_resolution(name).expect(&format!("Name {} is used before declaration!", name))));
             stmts.push(IrStmt::Load);
         }
     }
