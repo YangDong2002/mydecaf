@@ -80,10 +80,10 @@ impl<'p> Parser {
     fn block_stmt(stmt: Stmt<'p>) -> BlockItem<'p> { BlockItem::Stmt(stmt) }
     #[rule = "BlockItem -> Declaration"]
     fn block_decl(x: Declaration<'p>) -> BlockItem<'p> { BlockItem::Decl(x) }
-    #[rule = "Stmt -> Break"]
-    fn stmt_break(_break: Token) -> Stmt<'p> { Stmt::Break }
-    #[rule = "Stmt -> Continue"]
-    fn stmt_continue(_continue: Token) -> Stmt<'p> { Stmt::Continue }
+    #[rule = "Stmt -> Break Semi"]
+    fn stmt_break(_break: Token, _: Token) -> Stmt<'p> { Stmt::Break }
+    #[rule = "Stmt -> Continue Semi"]
+    fn stmt_continue(_continue: Token, _: Token) -> Stmt<'p> { Stmt::Continue }
     #[rule = "Stmt -> Compound"]
     fn stmt_compound(blk: Vec<BlockItem<'p>>) -> Stmt<'p> { Stmt::Compound(blk) }
     #[rule = "Stmt -> Return Expr Semi"]
