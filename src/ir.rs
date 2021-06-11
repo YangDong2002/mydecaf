@@ -108,8 +108,8 @@ fn statement<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, st: &Stmt<'a>) 
             ctx.break_continue.push((no + 2, no));
             if let Some(x) = cond {
                 expr(stmts, ctx, &*x);
+                stmts.push(IrStmt::Beqz(no + 2));
             }
-            stmts.push(IrStmt::Beqz(no + 2));
             stmts.push(IrStmt::Label(no + 1));
             let ret = statement(stmts, ctx, &**body);
             stmts.push(IrStmt::Label(no)); // continue
@@ -119,8 +119,10 @@ fn statement<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, st: &Stmt<'a>) 
             }
             if let Some(x) = cond {
                 expr(stmts, ctx, &*x);
+                stmts.push(IrStmt::Bnez(no + 1));
+            } else {
+                stmts.push(IrStmt::Br(no + 1));
             }
-            stmts.push(IrStmt::Bnez(no + 1));
             stmts.push(IrStmt::Label(no + 2)); // break
             ctx.break_continue.pop();
             ret
