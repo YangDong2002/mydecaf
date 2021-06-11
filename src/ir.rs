@@ -17,6 +17,7 @@ pub struct IrFunc<'a> {
 #[derive(Debug)]
 pub struct Context<'a> {
     pub vars: Vec<HashMap<&'a str, u32>>,
+    pub break_continue: Vec<(u32, u32)>,
     pub label: u32,
     pub depth: u32,
 }
@@ -49,7 +50,7 @@ pub enum IrStmt {
 }
 
 impl<'a> Context<'a> {
-    pub fn new() -> Context<'a> { Context { vars: vec![], label: 0, depth: 0 } }
+    pub fn new() -> Context<'a> { Context { vars: vec![], break_continue: vec![], label: 0, depth: 0 } }
 }
 
 pub fn ast2ir<'a>(p: &'a Prog<'a>) -> IrProg<'a> {
@@ -99,7 +100,64 @@ fn statement<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, st: &Stmt<'a>) 
             max_depth
         }
         Stmt::Compound(com) => {
-            compound(stmts, ctx, &**com)
+            compound(stmts, ctx, &*com)
+        }
+        Stmt::For(cond, body, update) => {
+            let no = ctx.label;
+            ctx.label = no + 3;
+            ctx.break_continue.push((no + 2, no));
+            stmts.push(IrStmt::Label(no)); // continue
+            if let Some(x) = cond {
+                expr(stmts, ctx, &*x);
+            }
+            stmts.push(IrStmt::Beqz(no + 2));
+            stmts.push(IrStmt::Label(no + 1));
+            let ret = statement(stmts, ctx, &**body);
+            if let Some(x) = update {
+                expr(stmts, ctx, &*x);
+            }
+            if let Some(x) = cond {
+                expr(stmts, ctx, &*x);
+            }
+            stmts.push(IrStmt::Bnez(no + 1));
+            stmts.push(IrStmt::Label(no + 2)); // break
+            ctx.break_continue.pop();
+            ret
+        }
+        Stmt::DoWhile(body, cond) => {
+            let no = ctx.label;
+            ctx.label = no + 3;
+            ctx.break_continue.push((no + 2, no + 2));
+            stmts.push(IrStmt::Label(no));
+            let ret = statement(stmts, ctx, &**body);
+            stmts.push(IrStmt::Label(no + 1)); // continue
+            expr(stmts, ctx, cond);
+            stmts.push(IrStmt::Bnez(no));
+            stmts.push(IrStmt::Label(no + 2)); // break
+            ctx.break_continue.pop();
+            ret
+        }
+        Stmt::Break => {
+            match ctx.break_continue.last() {
+                Some((break_addr, _)) => {
+                    stmts.push(IrStmt::Br(*break_addr))
+                }
+                None => {
+                    panic!("Invalid break!")
+                }
+            }
+            ctx.depth
+        }
+        Stmt::Continue => {
+            match ctx.break_continue.last() {
+                Some((_, continue_addr)) => {
+                    stmts.push(IrStmt::Br(*continue_addr))
+                }
+                None => {
+                    panic!("Invalid continue!")
+                }
+            }
+            ctx.depth
         }
     }
 }

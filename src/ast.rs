@@ -20,7 +20,11 @@ pub enum Stmt<'a> {
     Ret(Expr<'a>),
     MaybeExpr(Option<Expr<'a>>),
     If(Expr<'a>, Box<Stmt<'a>>, Option<Box<Stmt<'a>>>),
-    Compound(Box<Vec<BlockItem<'a>>>),
+    Compound(Vec<BlockItem<'a>>),
+    For(Option<Expr<'a>>, Box<Stmt<'a>>, Option<Expr<'a>>),
+    DoWhile(Box<Stmt<'a>>, Expr<'a>),
+    Break,
+    Continue,
 }
 
 #[derive(Debug)]

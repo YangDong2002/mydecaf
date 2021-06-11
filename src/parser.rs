@@ -9,6 +9,13 @@ impl<'p> Token<'p> {
     }
 }
 
+fn add_box<T>(x: Option<T>) -> Option<Box<T>> {
+    match x {
+        Some(u) => { Some(Box::new(u)) }
+        None => { None }
+    }
+}
+
 #[parser_macros::lalr1(Prog)]
 #[lex = r#"
 priority = [
@@ -22,6 +29,11 @@ priority = [
 'return' = 'Return'
 'if' = 'If'
 'else' = 'Else'
+'for' = 'For'
+'do' = 'Do'
+'while' = 'While'
+'break' = 'Break'
+'continue' = 'Continue'
 ';' = 'Semi'
 '\(' = 'LPar'
 '\)' = 'RPar'
@@ -68,21 +80,47 @@ impl<'p> Parser {
     fn block_stmt(stmt: Stmt<'p>) -> BlockItem<'p> { BlockItem::Stmt(stmt) }
     #[rule = "BlockItem -> Declaration"]
     fn block_decl(x: Declaration<'p>) -> BlockItem<'p> { BlockItem::Decl(x) }
+    #[rule = "Stmt -> Break"]
+    fn stmt_break(_break: Token) -> Stmt<'p> { Stmt::Break }
+    #[rule = "Stmt -> Continue"]
+    fn stmt_continue(_continue: Token) -> Stmt<'p> { Stmt::Continue }
     #[rule = "Stmt -> Compound"]
-    fn stmt_compound(blk: Vec<BlockItem<'p>>) -> Stmt<'p> { Stmt::Compound(Box::new(blk)) }
+    fn stmt_compound(blk: Vec<BlockItem<'p>>) -> Stmt<'p> { Stmt::Compound(blk) }
     #[rule = "Stmt -> Return Expr Semi"]
     fn stmt_ret(_r: Token, e: Expr<'p>, _s: Token) -> Stmt<'p> { Stmt::Ret(e) }
     #[rule = "Stmt -> MaybeExpr Semi"]
     fn stmt_maybe_expr(m: Option<Expr<'p>>, _s: Token) -> Stmt<'p> { Stmt::MaybeExpr(m) }
     #[rule = "Stmt -> If LPar Expr RPar Stmt MaybeElse"]
-    fn stmt_if_else(_if: Token, _lpar: Token, cond: Expr<'p>, _rpar: Token, if_stmt: Stmt<'p>, maybe_else: Option<Box<Stmt<'p>>>) -> Stmt<'p> {
-        Stmt::If(cond, Box::new(if_stmt), maybe_else)
+    fn stmt_if_else(_if: Token, _lpar: Token, cond: Expr<'p>, _rpar: Token, if_stmt: Stmt<'p>, maybe_else: Option<Stmt<'p>>) -> Stmt<'p> {
+        Stmt::If(cond, Box::new(if_stmt), add_box(maybe_else))
+    }
+    #[rule = "Stmt -> For LPar Declaration MaybeExpr Semi MaybeExpr RPar Stmt"]
+    fn stmt_for_decl(_for: Token, _lpar: Token, decl: Declaration<'p>, cond: Option<Expr<'p>>, _s: Token, update: Option<Expr<'p>>, _rpar: Token, body: Stmt<'p>) -> Stmt<'p> {
+        Stmt::Compound(vec![
+            BlockItem::Decl(decl),
+            BlockItem::Stmt(Stmt::For(cond, Box::new(body), update))
+        ])
+    }
+    #[rule = "Stmt -> For LPar MaybeExpr Semi MaybeExpr Semi MaybeExpr RPar Stmt"]
+    fn stmt_for_expr(_for: Token, _lpar: Token, init: Option<Expr<'p>>, _s0: Token, cond: Option<Expr<'p>>, _s: Token, update: Option<Expr<'p>>, _rpar: Token, body: Stmt<'p>) -> Stmt<'p> {
+        Stmt::Compound(vec![
+            BlockItem::Stmt(Stmt::MaybeExpr(init)),
+            BlockItem::Stmt(Stmt::For(cond, Box::new(body), update))
+        ])
+    }
+    #[rule = "Stmt -> Do Stmt While LPar Expr RPar"]
+    fn stmt_do_while(_do: Token, body: Stmt<'p>, _while: Token, _lp: Token, cond: Expr<'p>, _rp: Token) -> Stmt<'p> {
+        Stmt::DoWhile(Box::new(body), cond)
+    }
+    #[rule = "Stmt -> While LPar Expr RPar Stmt"]
+    fn stmt_while(_while: Token, _lp: Token, cond: Expr<'p>, _rp: Token, body: Stmt<'p>) -> Stmt<'p> {
+        Stmt::For(Some(cond), Box::new(body), None)
     }
     #[rule = "MaybeElse ->"]
     #[prec = "UNot"]
-    fn no_else() -> Option<Box<Stmt<'p>>> { None }
+    fn no_else() -> Option<Stmt<'p>> { None }
     #[rule = "MaybeElse -> Else Stmt"]
-    fn have_else(_else: Token, stmt: Stmt<'p>) -> Option<Box<Stmt<'p>>> { Some(Box::new(stmt)) }
+    fn have_else(_else: Token, stmt: Stmt<'p>) -> Option<Stmt<'p>> { Some(stmt) }
     #[rule = "MaybeExpr ->"]
     fn maybe_expr_empty() -> Option<Expr<'p>> { None }
     #[rule = "MaybeExpr -> Expr"]
