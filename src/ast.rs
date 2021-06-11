@@ -6,19 +6,20 @@ pub struct Prog<'a> {
 #[derive(Debug)]
 pub struct Func<'a> {
     pub name: &'a str,
-    pub stmts: Stmts<'a>,
+    pub stmts: Vec<BlockItem<'a>>,
 }
 
 #[derive(Debug)]
-pub struct Stmts<'a> {
-    pub stmts: Vec<Stmt<'a>>,
+pub enum BlockItem<'a> {
+    Stmt(Stmt<'a>),
+    Decl(Declaration<'a>),
 }
 
 #[derive(Debug)]
 pub enum Stmt<'a> {
     Ret(Expr<'a>),
     MaybeExpr(Option<Expr<'a>>),
-    Declaration(Declaration<'a>),
+    If(Expr<'a>, Box<Stmt<'a>>, Option<Box<Stmt<'a>>>)
 }
 
 #[derive(Debug)]
@@ -29,8 +30,14 @@ pub struct Declaration<'a> {
 
 #[derive(Debug)]
 pub enum Expr<'a> {
-    LOr(LogicalOr<'a>),
     Assign(&'a str, Box<Expr<'a>>),
+    Cond(Conditional<'a>),
+}
+
+#[derive(Debug)]
+pub enum Conditional<'a> {
+    LOr(LogicalOr<'a>),
+    Cond(LogicalOr<'a>, Box<Expr<'a>>, Box<Conditional<'a>>),
 }
 
 #[derive(Debug)]

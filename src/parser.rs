@@ -20,6 +20,8 @@ priority = [
 [lexical]
 'int' = 'Int'
 'return' = 'Return'
+'if' = 'If'
+'else' = 'Else'
 ';' = 'Semi'
 '\(' = 'LPar'
 '\)' = 'RPar'
@@ -27,6 +29,8 @@ priority = [
 '\}' = 'RBrc'
 '==' = 'Eq'
 '=' = 'Eqto'
+':' = 'Colon'
+'\?' = 'Quest'
 '!=' = 'Neq'
 '>=' = 'Geq'
 '>' = 'Gt'
@@ -48,26 +52,37 @@ priority = [
 impl<'p> Parser {
     #[rule = "Prog -> Func"]
     fn prog(func: Func<'p>) -> Prog<'p> { Prog { func } }
-    #[rule = "Func -> Int Id LPar RPar LBrc Stmts RBrc"]
-    fn func(_i: Token, name: Token, _lp: Token, _rp: Token, _lb: Token, stmts: Stmts<'p>, _rb: Token) -> Func<'p> {
+    #[rule = "Func -> Int Id LPar RPar LBrc BlockItems RBrc"]
+    fn func(_i: Token, name: Token, _lp: Token, _rp: Token, _lb: Token, stmts: Vec<BlockItem<'p>>, _rb: Token) -> Func<'p> {
         Func { name: name.str(), stmts }
     }
-    #[rule = "Stmts ->"]
-    fn stmts_empty() -> Stmts<'p> { Stmts { stmts: vec![] } }
-    #[rule = "Stmts -> Stmts Stmt"]
-    fn stmts_stmt(mut a: Stmts<'p>, b: Stmt<'p>) -> Stmts<'p> {
-        (a.stmts.push(b), a).1
+    #[rule = "BlockItems ->"]
+    fn block_empty() -> Vec<BlockItem<'p>> { vec![] }
+    #[rule = "BlockItems -> BlockItems BlockItem"]
+    fn block_one(mut stmts: Vec<BlockItem<'p>>, r: BlockItem<'p>) -> Vec<BlockItem<'p>> {
+        (stmts.push(r), stmts).1
     }
+    #[rule = "BlockItem -> Stmt"]
+    fn block_stmt(stmt: Stmt<'p>) -> BlockItem<'p> { BlockItem::Stmt(stmt) }
+    #[rule = "BlockItem -> Declaration"]
+    fn block_decl(x: Declaration<'p>) -> BlockItem<'p> { BlockItem::Decl(x) }
     #[rule = "Stmt -> Return Expr Semi"]
     fn stmt_ret(_r: Token, e: Expr<'p>, _s: Token) -> Stmt<'p> { Stmt::Ret(e) }
     #[rule = "Stmt -> MaybeExpr Semi"]
     fn stmt_maybe_expr(m: Option<Expr<'p>>, _s: Token) -> Stmt<'p> { Stmt::MaybeExpr(m) }
+    #[rule = "Stmt -> If LPar Expr RPar Stmt MaybeElse"]
+    fn stmt_if_else(_if: Token, _lpar: Token, cond: Expr<'p>, _rpar: Token, if_stmt: Stmt<'p>, maybe_else: Option<Box<Stmt<'p>>>) -> Stmt<'p> {
+        Stmt::If(cond, Box::new(if_stmt), maybe_else)
+    }
+    #[rule = "MaybeElse ->"]
+    #[prec = "UNot"]
+    fn no_else() -> Option<Box<Stmt<'p>>> { None }
+    #[rule = "MaybeElse -> Else Stmt"]
+    fn have_else(_else: Token, stmt: Stmt<'p>) -> Option<Box<Stmt<'p>>> { Some(Box::new(stmt)) }
     #[rule = "MaybeExpr ->"]
     fn maybe_expr_empty() -> Option<Expr<'p>> { None }
     #[rule = "MaybeExpr -> Expr"]
     fn maybe_expr_full(x: Expr<'p>) -> Option<Expr<'p>> { Some(x) }
-    #[rule = "Stmt -> Declaration"]
-    fn stmt_decl(x: Declaration<'p>) -> Stmt<'p> { Stmt::Declaration(x) }
     #[rule = "Declaration -> Int Id Semi"]
     fn declaration_uninitialized(_i: Token, iden: Token, _s: Token) -> Declaration<'p> {
         Declaration { name: iden.str(), val: None }
@@ -76,8 +91,14 @@ impl<'p> Parser {
     fn declaration_initialized(_i: Token, iden: Token, _e: Token, e: Expr<'p>, _s: Token) -> Declaration<'p> {
         Declaration { name: iden.str(), val: Some(e) }
     }
-    #[rule = "Expr -> LogicalOr"]
-    fn expr_lor(o: LogicalOr<'p>) -> Expr<'p> { Expr::LOr(o) }
+    #[rule = "Expr -> Cond"]
+    fn expr_cond(cond: Conditional<'p>) -> Expr<'p> { Expr::Cond(cond) }
+    #[rule = "Cond -> LogicalOr"]
+    fn cond_lor(o: LogicalOr<'p>) -> Conditional<'p> { Conditional::LOr(o) }
+    #[rule = "Cond -> LogicalOr Quest Expr Colon Cond"]
+    fn cond_cond(o: LogicalOr<'p>, _q: Token, true_exp: Expr<'p>, _c: Token, false_cond: Conditional<'p>) -> Conditional<'p> {
+        Conditional::Cond(o, Box::new(true_exp), Box::new(false_cond))
+    }
     #[rule = "Expr -> Id Eqto Expr"]
     fn expr_assign(a: Token, _b: Token, c: Expr<'p>) -> Expr<'p> {
         Expr::Assign(a.str(), Box::new(c))

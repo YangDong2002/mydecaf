@@ -78,6 +78,22 @@ pub fn write_asm(p: &IrProg, w: &mut impl Write) -> Result<()> {
             IrStmt::Pop => {
                 writeln!(w, "  addi sp, sp, 4")?;
             }
+            IrStmt::Label(x) => {
+                writeln!(w, "label{}:", x)?;
+            }
+            IrStmt::Beqz(x) => {
+                writeln!(w, "  lw t1, 0(sp)")?;
+                writeln!(w, "  addi sp, sp, 4")?;
+                writeln!(w, "  beqz t1, label{}", x)?;
+            }
+            IrStmt::Bnez(x) => {
+                writeln!(w, "  lw t1, 0(sp)")?;
+                writeln!(w, "  addi sp, sp, 4")?;
+                writeln!(w, "  bnez t1, label{}", x)?;
+            }
+            IrStmt::Br(x) => {
+                writeln!(w, "  j label{}", x)?;
+            }
         }
     }
     writeln!(w, "  sw x0, -4(sp)")?;

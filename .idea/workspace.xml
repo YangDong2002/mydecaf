@@ -12,8 +12,12 @@
     <cargoProject FILE="$PROJECT_DIR$/Cargo.toml" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="9e896d9c-b00e-4a9f-86fd-46caf03dfd6a" name="Default Changelist" comment="Step 5, small fix">
+    <list default="true" id="9e896d9c-b00e-4a9f-86fd-46caf03dfd6a" name="Default Changelist" comment="Step 5 passed">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ast.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/ast.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/codegen.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/codegen.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ir.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/ir.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/parser.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/parser.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -67,9 +71,15 @@
     <property name="node.js.selected.package.tslint" value="(autodetect)" />
     <property name="nodejs_package_manager_path" value="npm" />
     <property name="org.rust.cargo.project.model.PROJECT_DISCOVERY" value="true" />
+    <property name="org.rust.disableDetachedFileInspection/Users/yangdong/Desktop/Study/Compilers/mydecaf/src/ast.rs" value="true" />
     <property name="settings.editor.selected.configurable" value="preferences.pluginManager" />
   </component>
   <component name="RunManager">
+    <configuration default="true" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="Run" type="CargoCommandRunConfiguration" factoryName="Cargo Command" nameIsGenerated="true">
       <option name="command" value="run" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
@@ -103,7 +113,8 @@
       <workItem from="1620385715273" duration="529000" />
       <workItem from="1620386260765" duration="9049000" />
       <workItem from="1620398586957" duration="235000" />
-      <workItem from="1620398835153" duration="1386000" />
+      <workItem from="1620398835153" duration="8974000" />
+      <workItem from="1623377780732" duration="4204000" />
     </task>
     <task id="LOCAL-00001" summary="Start using CLion &amp; Code reformatting">
       <created>1620385898512</created>
@@ -140,7 +151,14 @@
       <option name="project" value="LOCAL" />
       <updated>1620399973167</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="Step 5, small fix">
+      <created>1620400248575</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1620400248575</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

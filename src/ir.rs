@@ -15,6 +15,12 @@ pub struct IrFunc<'a> {
 }
 
 #[derive(Debug)]
+pub struct Context<'a> {
+    pub vars: HashMap<&'a str, usize>,
+    pub label: u32,
+}
+
+#[derive(Debug)]
 pub enum IrStmt {
     Const(i32),
     Unary(UnaryOp),
@@ -24,42 +30,42 @@ pub enum IrStmt {
     Load,
     Store,
     Pop,
+    Label(u32),
+    Bnez(u32),
+    Beqz(u32),
+    Br(u32),
 }
 
+impl<'a> Context<'a> {
+    pub fn new() -> Context<'a> { Context { vars: HashMap::new(), label: 0 } }
+}
 pub fn ast2ir<'a>(p: &'a Prog<'a>) -> IrProg<'a> {
-    let mut ctx: HashMap<&'a str, usize> = HashMap::new();
+    let mut ctx = Context::new();
     IrProg { func: func(&p.func, &mut ctx) }
 }
 
-fn func<'a>(f: &Func<'a>, ctx: &mut HashMap<&'a str, usize>) -> IrFunc<'a> {
+fn func<'a>(f: &Func<'a>, ctx: &mut Context<'a>) -> IrFunc<'a> {
     let mut stmts = Vec::new();
     let mut locals = 0;
-    for x in &f.stmts.stmts {
-        if let Stmt::Declaration(_c) = x {
+    for x in &f.stmts {
+        if let BlockItem::Decl(_c) = x {
             locals += 1;
         }
     }
 
-    for x in &f.stmts.stmts {
+    for x in &f.stmts {
         match x {
-            Stmt::Ret(e) => {
-                expr(&mut stmts, ctx, &e);
-                stmts.push(IrStmt::Ret);
+            BlockItem::Stmt(st) => {
+                statement(&mut stmts, ctx, st);
             }
-            Stmt::MaybeExpr(e) => {
-                if let Some(x) = e {
-                    expr(&mut stmts, ctx, &x);
-                    stmts.push(IrStmt::Pop);
-                }
-            }
-            Stmt::Declaration(e) => {
-                if ctx.contains_key(e.name) {
+            BlockItem::Decl(e) => {
+                if ctx.vars.contains_key(e.name) {
                     panic!("Variable {} is defined twice", e.name);
                 } else {
-                    ctx.insert(e.name, ctx.len());
+                    ctx.vars.insert(e.name, ctx.vars.len());
                     if let Some(x) = &e.val {
                         expr(&mut stmts, ctx, &x);
-                        stmts.push(IrStmt::FrameAddr(*ctx.get(e.name).unwrap()));
+                        stmts.push(IrStmt::FrameAddr(*ctx.vars.get(e.name).unwrap()));
                         stmts.push(IrStmt::Store);
                         stmts.push(IrStmt::Pop);
                     }
@@ -70,22 +76,74 @@ fn func<'a>(f: &Func<'a>, ctx: &mut HashMap<&'a str, usize>) -> IrFunc<'a> {
     IrFunc { name: f.name, stmts, locals }
 }
 
-fn expr<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut HashMap<&'a str, usize>, e: &Expr) {
-    match e {
-        Expr::LOr(a) => { logical_or(stmts, ctx, a); }
-        Expr::Assign(name, val) => {
-            if ctx.contains_key(name) {
-                expr(stmts, ctx, &**val);
-                stmts.push(IrStmt::FrameAddr(*ctx.get(name).unwrap()));
-                stmts.push(IrStmt::Store);
+fn statement<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, st: &Stmt) {
+    match st {
+        Stmt::Ret(r) => {
+            expr(stmts, ctx, &r);
+            stmts.push(IrStmt::Ret);
+        }
+        Stmt::MaybeExpr(e) => {
+            if let Some(x) = e {
+                expr(stmts, ctx, &x);
+                stmts.push(IrStmt::Pop);
+            }
+        }
+        Stmt::If(cond, if_expr, op) => {
+            expr(stmts, ctx, cond);
+            let no = ctx.label;
+            if let Some(x) = op {
+                ctx.label = no + 2;
+                stmts.push(IrStmt::Beqz(no));
+                statement(stmts, ctx, &*if_expr);
+                stmts.push(IrStmt::Br(no + 1));
+                stmts.push(IrStmt::Label(no));
+                statement(stmts, ctx, &*x);
+                stmts.push(IrStmt::Label(no + 1));
             } else {
-                panic!("Variable {} is assigned a value before declaration!", name);
+                ctx.label = no + 1;
+                stmts.push(IrStmt::Beqz(no));
+                statement(stmts, ctx, &*if_expr);
+                stmts.push(IrStmt::Label(no));
             }
         }
     }
 }
 
-fn logical_or<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut HashMap<&'a str, usize>, e: &LogicalOr) {
+fn conditional<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, o: &Conditional) {
+    match o {
+        Conditional::LOr(a) => { logical_or(stmts, ctx, &a); }
+        Conditional::Cond(cond, t, f) => {
+            let no: u32 = ctx.label;
+            ctx.label = no + 2;
+            logical_or(stmts, ctx, &cond);
+            stmts.push(IrStmt::Beqz(no));
+            expr(stmts, ctx, &t);
+            stmts.push(IrStmt::Br(no + 1));
+            stmts.push(IrStmt::Label(no));
+            conditional(stmts, ctx, f);
+            stmts.push(IrStmt::Label(no + 1));
+        }
+    }
+}
+
+fn expr<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, e: &Expr) {
+    match e {
+        Expr::Assign(name, val) => {
+            if ctx.vars.contains_key(name) {
+                expr(stmts, ctx, &**val);
+                stmts.push(IrStmt::FrameAddr(*ctx.vars.get(name).unwrap()));
+                stmts.push(IrStmt::Store);
+            } else {
+                panic!("Variable {} is assigned a value before declaration!", name);
+            }
+        }
+        Expr::Cond(a) => {
+            conditional(stmts, ctx, a);
+        }
+    }
+}
+
+fn logical_or<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, e: &LogicalOr) {
     match e {
         LogicalOr::LAnd(a) => { logical_and(stmts, ctx, a); }
         LogicalOr::Bop(a, op, b) => {
@@ -96,7 +154,7 @@ fn logical_or<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut HashMap<&'a str, usize>, e:
     }
 }
 
-fn logical_and<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut HashMap<&'a str, usize>, e: &LogicalAnd) {
+fn logical_and<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, e: &LogicalAnd) {
     match e {
         LogicalAnd::Eqn(a) => { equality(stmts, ctx, a); }
         LogicalAnd::Bop(a, op, b) => {
@@ -107,7 +165,7 @@ fn logical_and<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut HashMap<&'a str, usize>, e
     }
 }
 
-fn equality<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut HashMap<&'a str, usize>, e: &Equality) {
+fn equality<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, e: &Equality) {
     match e {
         Equality::Rel(a) => { relational(stmts, ctx, a); }
         Equality::Bop(a, op, b) => {
@@ -118,7 +176,7 @@ fn equality<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut HashMap<&'a str, usize>, e: &
     }
 }
 
-fn relational<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut HashMap<&'a str, usize>, e: &Relational) {
+fn relational<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, e: &Relational) {
     match e {
         Relational::Add(a) => { additive(stmts, ctx, a); }
         Relational::Bop(a, op, b) => {
@@ -129,7 +187,7 @@ fn relational<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut HashMap<&'a str, usize>, e:
     }
 }
 
-fn additive<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut HashMap<&'a str, usize>, a: &Additive) {
+fn additive<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, a: &Additive) {
     match a {
         Additive::Mul(m) => { multiplicative(stmts, ctx, m); }
         Additive::Bop(a, op, b) => {
@@ -140,7 +198,7 @@ fn additive<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut HashMap<&'a str, usize>, a: &
     }
 }
 
-fn multiplicative<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut HashMap<&'a str, usize>, m: &Multiplicative) {
+fn multiplicative<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, m: &Multiplicative) {
     match m {
         Multiplicative::U(u) => unary(stmts, ctx, u),
         Multiplicative::Mul(m, op, a) => {
@@ -151,7 +209,7 @@ fn multiplicative<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut HashMap<&'a str, usize>
     }
 }
 
-fn unary<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut HashMap<&'a str, usize>, u: &Unary) {
+fn unary<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, u: &Unary) {
     match u {
         Unary::Prim(p) => primary(stmts, ctx, p),
         Unary::Uop(op, v) => {
@@ -161,7 +219,7 @@ fn unary<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut HashMap<&'a str, usize>, u: &Una
     }
 }
 
-fn primary<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut HashMap<&'a str, usize>, p: &Primary) {
+fn primary<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, p: &Primary) {
     match p {
         Primary::Int(i, _) => {
             stmts.push(IrStmt::Const(*i));
@@ -170,7 +228,7 @@ fn primary<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut HashMap<&'a str, usize>, p: &P
             expr(stmts, ctx, e);
         }
         Primary::Identifier(name) => {
-            stmts.push(IrStmt::FrameAddr(*ctx.get(name).expect(&format!("{} is referenced before definition!", name))));
+            stmts.push(IrStmt::FrameAddr(*ctx.vars.get(name).expect(&format!("{} is referenced before definition!", name))));
             stmts.push(IrStmt::Load);
         }
     }
