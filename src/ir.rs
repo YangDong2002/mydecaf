@@ -106,13 +106,13 @@ fn statement<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, st: &Stmt<'a>) 
             let no = ctx.label;
             ctx.label = no + 3;
             ctx.break_continue.push((no + 2, no));
-            stmts.push(IrStmt::Label(no)); // continue
             if let Some(x) = cond {
                 expr(stmts, ctx, &*x);
             }
             stmts.push(IrStmt::Beqz(no + 2));
             stmts.push(IrStmt::Label(no + 1));
             let ret = statement(stmts, ctx, &**body);
+            stmts.push(IrStmt::Label(no)); // continue
             if let Some(x) = update {
                 expr(stmts, ctx, &*x);
             }
@@ -127,7 +127,7 @@ fn statement<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, st: &Stmt<'a>) 
         Stmt::DoWhile(body, cond) => {
             let no = ctx.label;
             ctx.label = no + 3;
-            ctx.break_continue.push((no + 2, no + 2));
+            ctx.break_continue.push((no + 2, no + 1));
             stmts.push(IrStmt::Label(no));
             let ret = statement(stmts, ctx, &**body);
             stmts.push(IrStmt::Label(no + 1)); // continue
