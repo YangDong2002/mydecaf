@@ -28,8 +28,8 @@ pub fn write_func(f: &IrFunc, w: &mut impl Write) -> Result<()> {
         match s {
             IrStmt::Const(x) => {
                 writeln!(w, "  li t0, {}", x)?;
-                writeln!(w, "  sw t0, -4(sp)")?;
                 writeln!(w, "  addi sp, sp, -4")?;
+                writeln!(w, "  sw t0, 0(sp)")?;
             }
             IrStmt::Unary(op) => {
                 writeln!(w, "  lw t0, 0(sp)")?;
@@ -66,9 +66,9 @@ pub fn write_func(f: &IrFunc, w: &mut impl Write) -> Result<()> {
                 writeln!(w, "  j {}_epilogue", f.name)?;
             }
             IrStmt::FrameAddr(a) => {
-                writeln!(w, "  addi t0, fp, {}", if *a < 0 { 4 + 4 * *a } else { -12 - a * 4 })?;
-                writeln!(w, "  sw t0, -4(sp)")?;
+                writeln!(w, "  addi t0, fp, {}", if *a < 0 { 4 - 4 * *a } else { -12 - a * 4 })?;
                 writeln!(w, "  addi sp, sp, -4")?;
+                writeln!(w, "  sw t0, 0(sp)")?;
             }
             IrStmt::Load => {
                 writeln!(w, "  lw t0, 0(sp)")?;
@@ -107,8 +107,8 @@ pub fn write_func(f: &IrFunc, w: &mut impl Write) -> Result<()> {
             }
         }
     }
-    writeln!(w, "  sw x0, -4(sp)")?;
     writeln!(w, "  addi sp, sp, -4")?;
+    writeln!(w, "  sw x0, 0(sp)")?;
     writeln!(w, "{}_epilogue:", f.name)?;
     writeln!(w, "  lw a0, 0(sp)")?;
     writeln!(w, "  addi sp, sp, 4")?;

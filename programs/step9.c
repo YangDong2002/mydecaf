@@ -1,11 +1,8 @@
-int gcd(int a, int b) {
-    return b == 0 ? a : gcd(a, b % a);
+int add(int a, int b) {
+    return a + b;
 }
 
-int f() {}
-
 int main() {
-    int a = 114514;
-    int b = 1919810;
-    return gcd(a, b);
+    int sum = add(1 + 2, 4);
+    return sum + sum;
 }
