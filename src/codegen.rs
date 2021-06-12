@@ -66,7 +66,7 @@ pub fn write_func(f: &IrFunc, w: &mut impl Write) -> Result<()> {
                 writeln!(w, "  j {}_epilogue", f.name)?;
             }
             IrStmt::FrameAddr(a) => {
-                writeln!(w, "  addi t0, fp, {}", if *a < 0 { 4 - 4 * *a } else { -12 - a * 4 })?;
+                writeln!(w, "  addi t0, fp, {}", if *a < 0 { -4 - 4 * *a } else { -12 - a * 4 })?;
                 writeln!(w, "  addi sp, sp, -4")?;
                 writeln!(w, "  sw t0, 0(sp)")?;
             }
