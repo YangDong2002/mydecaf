@@ -6,8 +6,7 @@ use crate::consteval::const_expr;
 #[derive(Debug)]
 pub struct IrProg<'a> {
     pub funcs: Vec<IrFunc<'a>>,
-    pub global_initialized: Vec<(&'a str, i32)>,
-    pub global_uninitialized: Vec<&'a str>,
+    pub globals: Vec<(&'a str, i32)>,
 }
 
 #[derive(Debug)]
@@ -23,7 +22,7 @@ pub enum NameStatus {
     // position, #args
     FuncImplemented(usize, usize),
     // position, #args
-    Var(Option<i32>), // optional initial value
+    Var(i32), // with initial value
 }
 
 #[derive(Debug)]
@@ -79,8 +78,7 @@ impl<'a> Context<'a> {
 pub fn ast2ir<'a>(p: &'a Prog<'a>) -> IrProg<'a> {
     let mut ctx = Context::new();
     let mut irfunc: Vec<IrFunc> = vec![];
-    let mut global_initialized: Vec<(&str, i32)> = vec![];
-    let mut global_uninitialized: Vec<&str> = vec![];
+    let mut globals: Vec<(&str, i32)> = vec![];
     let mut has_main = false;
     for (id, x) in p.contents.iter().enumerate() {
         match x {
@@ -112,21 +110,21 @@ pub fn ast2ir<'a>(p: &'a Prog<'a>) -> IrProg<'a> {
                 if ctx.globals.contains_key(d.name) { panic!("Redefinition of global variable {}", d.name) }
                 match &d.val {
                     None => {
-                        ctx.globals.insert(d.name, NameStatus::Var(None));
-                        global_uninitialized.push(d.name);
+                        ctx.globals.insert(d.name, NameStatus::Var(0));
+                        globals.push((d.name, 0));
                     }
                     Some(x) => {
                         let ret = const_expr(x);
                         if let Err(()) = ret { panic!("Global variable {} is not initialized to a constant expression!", d.name) }
-                        ctx.globals.insert(d.name, NameStatus::Var(Some(ret.unwrap())));
-                        global_initialized.push((d.name, ret.unwrap()));
+                        ctx.globals.insert(d.name, NameStatus::Var(ret.unwrap()));
+                        globals.push((d.name, ret.unwrap()));
                     }
                 }
             }
         }
     }
     if !has_main { panic!("No main function!") }
-    IrProg { funcs: irfunc, global_initialized, global_uninitialized }
+    IrProg { funcs: irfunc, globals }
 }
 
 fn func<'a>(f: &Func<'a>, ctx: &mut Context<'a>) -> IrFunc<'a> {
