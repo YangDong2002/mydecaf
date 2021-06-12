@@ -102,7 +102,7 @@ pub fn ast2ir<'a>(p: &'a Prog<'a>) -> IrProg<'a> {
 fn func<'a>(f: &Func<'a>, ctx: &mut Context<'a>) -> IrFunc<'a> {
     let mut stmts = Vec::new();
     let mut args: HashMap<&'a str, i32> = HashMap::new();
-    for (id, decl) in f.params.iter().rev().enumerate() {
+    for (id, decl) in f.params.iter().enumerate() {
         if args.contains_key(decl.name) {
             panic!("Argument name {} appears twice in function {}", decl.name, f.name);
         }
