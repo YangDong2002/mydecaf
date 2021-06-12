@@ -225,6 +225,8 @@ fn compound<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, com: &Vec<BlockI
             BlockItem::Decl(e) => {
                 if ctx.vars.last().unwrap().contains_key(e.name) {
                     panic!("Variable {} is defined twice", e.name);
+                } else if ctx.vars.len() == 2 && ctx.vars[0].contains_key(e.name) {
+                    panic!("Variable {} is defined as function parameter", e.name);
                 } else {
                     let id = ctx.depth;
                     ctx.depth += 1;
