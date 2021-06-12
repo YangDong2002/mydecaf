@@ -24,7 +24,7 @@ pub enum FuncStatus {
 pub struct Context<'a> {
     pub vars: Vec<HashMap<&'a str, i32>>,
     pub break_continue: Vec<(u32, u32)>,
-    pub func_decl: HashMap<&'a str, (FuncStatus, usize)>,
+    pub func_decl: HashMap<&'a str, (FuncStatus, (usize, usize))>,
     pub label: u32,
     pub depth: u32,
 }
@@ -77,20 +77,20 @@ pub fn ast2ir<'a>(p: &'a Prog<'a>) -> IrProg<'a> {
         if f.name == "main" { has_main = true; }
         match f.stmts {
             None => {
-                if let Some((status, num)) = ctx.func_decl.get(f.name) {
+                if let Some((status, (num, _cnt))) = ctx.func_decl.get(f.name) {
                     panic!("Function {} is already {:?} in #{}, but got defined again in #{}", f.name, status, num, id);
                 }
-                ctx.func_decl.insert(f.name, (FuncStatus::Declared, id));
+                ctx.func_decl.insert(f.name, (FuncStatus::Declared, (id, f.params.len())));
             }
             Some(_) => {
-                if let Some((status, num)) = ctx.func_decl.get(f.name) {
+                if let Some((status, (num, _cnt))) = ctx.func_decl.get(f.name) {
                     if *status == FuncStatus::Implemented {
                         panic!("Function {} is already implemented in #{}, but is implemented again in #{}", f.name, num, id);
                     } else if p.funcs[*num].params.len() != f.params.len() {
                         panic!("Function {} is declared to have {} parameters in #{}, but has {} parameters when implemented in #{}", f.name, p.funcs[*num].params.len(), num, f.params.len(), id);
                     }
                 }
-                ctx.func_decl.insert(f.name, (FuncStatus::Implemented, id));
+                ctx.func_decl.insert(f.name, (FuncStatus::Implemented, (id, f.params.len())));
                 irfunc.push(func(f, &mut ctx));
             }
         }
@@ -357,6 +357,10 @@ fn unary<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, u: &Unary) {
         Unary::Call(name, params) => {
             if !ctx.func_decl.contains_key(*name) {
                 panic!("Function {} is used before declaration/implementation!", *name);
+            }
+            let expected = ctx.func_decl.get(*name).unwrap().1.1;
+            if expected != params.len() {
+                panic!("Function {} requires {} parameters, but {} is given!", *name, expected, params.len());
             }
             for arg in params.iter().rev() {
                 expr(stmts, ctx, arg);
