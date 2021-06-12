@@ -1,12 +1,13 @@
 #[derive(Debug)]
 pub struct Prog<'a> {
-    pub func: Func<'a>,
+    pub funcs: Vec<Func<'a>>,
 }
 
 #[derive(Debug)]
 pub struct Func<'a> {
     pub name: &'a str,
-    pub stmts: Vec<BlockItem<'a>>,
+    pub params: Vec<Declaration<'a>>,
+    pub stmts: Option<Vec<BlockItem<'a>>>,
 }
 
 #[derive(Debug)]
@@ -84,6 +85,7 @@ pub enum Multiplicative<'a> {
 #[derive(Debug)]
 pub enum Unary<'a> {
     Prim(Primary<'a>),
+    Call(&'a str, Vec<Expr<'a>>),
     Uop(UnaryOp, Box<Unary<'a>>),
 }
 

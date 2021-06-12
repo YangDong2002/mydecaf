@@ -3,10 +3,16 @@ use std::io::{Result, Write};
 use crate::{ast::BinaryOp::*, ast::UnaryOp::*, ir::*};
 
 pub fn write_asm(p: &IrProg, w: &mut impl Write) -> Result<()> {
-    let f = &p.func;
+    for f in &p.funcs {
+        write_func(&f, w)?;
+    }
+    Ok(())
+}
 
+pub fn write_func(f: &IrFunc, w: &mut impl Write) -> Result<()> {
+    eprintln!("{}: ({} locals)", f.name, f.locals);
     for s in &f.stmts {
-        eprintln!("{:?}", s);
+        eprintln!("  {:?}", s);
     }
     writeln!(w, ".global {}", f.name)?;
     writeln!(w, "{}:", f.name)?;
@@ -15,7 +21,7 @@ pub fn write_asm(p: &IrProg, w: &mut impl Write) -> Result<()> {
     writeln!(w, "  addi sp, sp, {}", -frame_size)?;
     writeln!(w, "  sw ra, {}(sp)", frame_size - 4)?;
     writeln!(w, "  sw fp, {}(sp)", frame_size - 8)?;
-    writeln!(w, "  addi fp, fp, {}", frame_size)?;
+    writeln!(w, "  addi fp, sp, {}", frame_size)?;
 
     for s in &f.stmts {
         writeln!(w, "  # {:?}", s)?;
@@ -60,7 +66,7 @@ pub fn write_asm(p: &IrProg, w: &mut impl Write) -> Result<()> {
                 writeln!(w, "  j {}_epilogue", f.name)?;
             }
             IrStmt::FrameAddr(a) => {
-                writeln!(w, "  addi t0, fp, {}", -12 - (*a as i32) * 4)?;
+                writeln!(w, "  addi t0, fp, {}", if *a < 0 { 4 + 4 * *a } else { -12 - a * 4 })?;
                 writeln!(w, "  sw t0, -4(sp)")?;
                 writeln!(w, "  addi sp, sp, -4")?;
             }
@@ -93,6 +99,11 @@ pub fn write_asm(p: &IrProg, w: &mut impl Write) -> Result<()> {
             }
             IrStmt::Br(x) => {
                 writeln!(w, "  j label{}", x)?;
+            }
+            IrStmt::Call(name, num) => {
+                writeln!(w, "  call {}", name)?;
+                writeln!(w, "  addi sp, sp, {}", 4 * ((*num as i32) - 1))?;
+                writeln!(w, "  sw a0, 0(sp)")?;
             }
         }
     }

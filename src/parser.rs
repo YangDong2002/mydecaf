@@ -21,7 +21,8 @@ fn add_box<T>(x: Option<T>) -> Option<Box<T>> {
 priority = [
     { assoc = 'left', terms = ['Add', 'Sub'] },
     { assoc = 'left', terms = ['Mul', 'Div', 'Mod'] },
-    { assoc = 'no_assoc', terms = ['UNeg', 'UNot', 'UBNot'] }
+    { assoc = 'no_assoc', terms = ['UNeg', 'UNot', 'UBNot'] },
+    { assoc = 'left', terms = ['Else'] },
 ]
 
 [lexical]
@@ -35,6 +36,7 @@ priority = [
 'break' = 'Break'
 'continue' = 'Continue'
 ';' = 'Semi'
+',' = 'Comma'
 '\(' = 'LPar'
 '\)' = 'RPar'
 '\{' = 'LBrc'
@@ -62,11 +64,29 @@ priority = [
 '[a-zA-Z_]\w*' = 'Id'
 "#]
 impl<'p> Parser {
-    #[rule = "Prog -> Func"]
-    fn prog(func: Func<'p>) -> Prog<'p> { Prog { func } }
-    #[rule = "Func -> Int Id LPar RPar Compound"]
-    fn func(_i: Token, name: Token, _lp: Token, _rp: Token, stmts: Vec<BlockItem<'p>>) -> Func<'p> {
-        Func { name: name.str(), stmts }
+    #[rule = "Prog -> Prog Func"]
+    fn prog(mut prog: Prog<'p>, f: Func<'p>) -> Prog<'p> { Prog { funcs: (prog.funcs.push(f), prog.funcs).1 } }
+    #[rule = "Prog ->"]
+    fn prog_empty() -> Prog<'p> { Prog { funcs: vec![] } }
+    #[rule = "Func -> Int Id LPar Params RPar Compound"]
+    fn func(_i: Token, name: Token, _lp: Token, params: Vec<Declaration<'p>>, _rp: Token, stmts: Vec<BlockItem<'p>>) -> Func<'p> {
+        Func { name: name.str(), params, stmts: Some(stmts) }
+    }
+    #[rule = "Func -> Int Id LPar Params RPar Semi"]
+    fn func(_i: Token, name: Token, _lp: Token, params: Vec<Declaration<'p>>, _rp: Token, _s: Token) -> Func<'p> {
+        Func { name: name.str(), params, stmts: None }
+    }
+    #[rule = "Params -> "]
+    fn param_empty() -> Vec<Declaration<'p>> { vec![] }
+    #[rule = "Params -> MaybeParams Int Id"]
+    fn param_last(mut fir: Vec<Declaration<'p>>, _int: Token, name: Token) -> Vec<Declaration<'p>> {
+        (fir.push(Declaration { name: name.str(), val: None }), fir).1
+    }
+    #[rule = "MaybeParams -> "]
+    fn maybeparams_empty() -> Vec<Declaration<'p>> { vec![] }
+    #[rule = "MaybeParams -> MaybeParams Int Id Comma"]
+    fn maybeparams_last(mut fir: Vec<Declaration<'p>>, _int: Token, name: Token, _comma: Token) -> Vec<Declaration<'p>> {
+        (fir.push(Declaration { name: name.str(), val: None }), fir).1
     }
     #[rule = "Compound -> LBrc BlockItems RBrc"]
     fn compound(_l: Token, blk: Vec<BlockItem<'p>>, _r: Token) -> Vec<BlockItem<'p>> { blk }
@@ -195,6 +215,10 @@ impl<'p> Parser {
     }
     #[rule = "Unary -> Primary"]
     fn unary_p(p: Primary<'p>) -> Unary<'p> { Unary::Prim(p) }
+    #[rule = "Unary -> Id LPar ExprList RPar"]
+    fn unary_call(name: Token, _lp: Token, exprlist: Vec<Expr<'p>>, _rp: Token) -> Unary<'p> {
+        Unary::Call(name.str(), exprlist)
+    }
     #[rule = "Unary -> Sub Unary"]
     #[prec = "UNeg"]
     fn unary_neg(_: Token, u: Unary<'p>) -> Unary<'p> {
@@ -221,5 +245,15 @@ impl<'p> Parser {
     #[rule = "Primary -> Id"]
     fn prim_id(x: Token) -> Primary<'p> {
         Primary::Identifier(x.str())
+    }
+    #[rule = "ExprList -> "]
+    fn exprlist_empty() -> Vec<Expr<'p>> { vec![] }
+    #[rule = "ExprList -> MaybeExprList Expr"]
+    fn exprlist_last(mut l: Vec<Expr<'p>>, e: Expr<'p>) -> Vec<Expr<'p>> { (l.push(e), l).1 }
+    #[rule = "MaybeExprList ->"]
+    fn maybeexprlist_empty() -> Vec<Expr<'p>> { vec![] }
+    #[rule = "MaybeExprList -> MaybeExprList Expr Comma"]
+    fn maybeexprlist_last(mut l: Vec<Expr<'p>>, e: Expr<'p>, _com: Token) -> Vec<Expr<'p>> {
+        (l.push(e), l).1
     }
 }

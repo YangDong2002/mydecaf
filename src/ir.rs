@@ -4,7 +4,7 @@ use crate::ast::*;
 
 #[derive(Debug)]
 pub struct IrProg<'a> {
-    pub func: IrFunc<'a>,
+    pub funcs: Vec<IrFunc<'a>>,
 }
 
 #[derive(Debug)]
@@ -14,16 +14,23 @@ pub struct IrFunc<'a> {
     pub locals: u32,
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum FuncStatus {
+    Declared,
+    Implemented,
+}
+
 #[derive(Debug)]
 pub struct Context<'a> {
-    pub vars: Vec<HashMap<&'a str, u32>>,
+    pub vars: Vec<HashMap<&'a str, i32>>,
     pub break_continue: Vec<(u32, u32)>,
+    pub func_decl: HashMap<&'a str, (FuncStatus, usize)>,
     pub label: u32,
     pub depth: u32,
 }
 
 impl<'a> Context<'a> {
-    pub fn name_resolution(&self, name: &'a str) -> Option<u32> {
+    pub fn name_resolution(&self, name: &'a str) -> Option<i32> {
         for mp in self.vars.iter().rev() {
             if let Some(&x) = mp.get(name) {
                 return Some(x);
@@ -39,7 +46,7 @@ pub enum IrStmt {
     Unary(UnaryOp),
     Binary(BinaryOp),
     Ret,
-    FrameAddr(u32),
+    FrameAddr(i32),
     Load,
     Store,
     Pop,
@@ -47,21 +54,63 @@ pub enum IrStmt {
     Bnez(u32),
     Beqz(u32),
     Br(u32),
+    Call(String, usize),
 }
 
 impl<'a> Context<'a> {
-    pub fn new() -> Context<'a> { Context { vars: vec![], break_continue: vec![], label: 0, depth: 0 } }
+    pub fn new() -> Context<'a> {
+        Context {
+            vars: vec![],
+            break_continue: vec![],
+            func_decl: HashMap::new(),
+            label: 0,
+            depth: 0,
+        }
+    }
 }
 
 pub fn ast2ir<'a>(p: &'a Prog<'a>) -> IrProg<'a> {
     let mut ctx = Context::new();
-    if p.func.name != "main" { panic!("No main function!") }
-    IrProg { func: func(&p.func, &mut ctx) }
+    let mut irfunc: Vec<IrFunc> = vec![];
+    let mut has_main = false;
+    for (id, f) in p.funcs.iter().enumerate() {
+        if f.name == "main" { has_main = true; }
+        match f.stmts {
+            None => {
+                if let Some((status, num)) = ctx.func_decl.get(f.name) {
+                    panic!("Function {} is already {:?} in #{}, but got defined again in #{}", f.name, status, num, id);
+                }
+                ctx.func_decl.insert(f.name, (FuncStatus::Declared, id));
+            }
+            Some(_) => {
+                if let Some((status, num)) = ctx.func_decl.get(f.name) {
+                    if *status == FuncStatus::Implemented {
+                        panic!("Function {} is already implemented in #{}, but is implemented again in #{}", f.name, num, id);
+                    } else if p.funcs[*num].params.len() != f.params.len() {
+                        panic!("Function {} is declared to have {} parameters in #{}, but has {} parameters when implemented in #{}", f.name, p.funcs[*num].params.len(), num, f.params.len(), id);
+                    }
+                }
+                ctx.func_decl.insert(f.name, (FuncStatus::Implemented, id));
+                irfunc.push(func(f, &mut ctx));
+            }
+        }
+    }
+    if !has_main { panic!("No main function!") }
+    IrProg { funcs: irfunc }
 }
 
 fn func<'a>(f: &Func<'a>, ctx: &mut Context<'a>) -> IrFunc<'a> {
     let mut stmts = Vec::new();
-    let locals: u32 = compound(&mut stmts, ctx, &f.stmts);
+    let mut args: HashMap<&'a str, i32> = HashMap::new();
+    for (id, decl) in f.params.iter().rev().enumerate() {
+        if args.contains_key(decl.name) {
+            panic!("Argument name {} appears twice in function {}", decl.name, f.name);
+        }
+        args.insert(decl.name, -(id as i32) - 1);
+    }
+    ctx.vars.push(args);
+    let locals: u32 = compound(&mut stmts, ctx, f.stmts.as_ref().unwrap());
+    ctx.vars.pop();
     IrFunc { name: f.name, stmts, locals }
 }
 
@@ -179,7 +228,7 @@ fn compound<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, com: &Vec<BlockI
                 } else {
                     let id = ctx.depth;
                     ctx.depth += 1;
-                    ctx.vars.last_mut().unwrap().insert(e.name, id);
+                    ctx.vars.last_mut().unwrap().insert(e.name, id as i32);
                     if let Some(x) = &e.val {
                         expr(stmts, ctx, &x);
                         stmts.push(IrStmt::FrameAddr(*ctx.vars.last().unwrap().get(e.name).unwrap()));
@@ -302,6 +351,15 @@ fn unary<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, u: &Unary) {
         Unary::Uop(op, v) => {
             unary(stmts, ctx, v);
             stmts.push(IrStmt::Unary(*op));
+        }
+        Unary::Call(name, params) => {
+            if !ctx.func_decl.contains_key(*name) {
+                panic!("Function {} is used before declaration/implementation!", *name);
+            }
+            for arg in params.iter().rev() {
+                expr(stmts, ctx, arg);
+            }
+            stmts.push(IrStmt::Call(String::from(*name), params.len()));
         }
     }
 }
