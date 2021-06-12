@@ -64,16 +64,22 @@ priority = [
 '[a-zA-Z_]\w*' = 'Id'
 "#]
 impl<'p> Parser {
+    #[rule = "Prog -> Prog Declaration"]
+    fn prog_decl(mut prog: Prog<'p>, d: Declaration<'p>) -> Prog<'p> {
+        Prog { contents: (prog.contents.push(FuncDecl::Decl(d)), prog.contents).1 }
+    }
     #[rule = "Prog -> Prog Func"]
-    fn prog(mut prog: Prog<'p>, f: Func<'p>) -> Prog<'p> { Prog { funcs: (prog.funcs.push(f), prog.funcs).1 } }
+    fn prog_func(mut prog: Prog<'p>, f: Func<'p>) -> Prog<'p> {
+        Prog { contents: (prog.contents.push(FuncDecl::Func(f)), prog.contents).1 }
+    }
     #[rule = "Prog ->"]
-    fn prog_empty() -> Prog<'p> { Prog { funcs: vec![] } }
+    fn prog_empty() -> Prog<'p> { Prog { contents: vec![] } }
     #[rule = "Func -> Int Id LPar Params RPar Compound"]
-    fn func(_i: Token, name: Token, _lp: Token, params: Vec<Declaration<'p>>, _rp: Token, stmts: Vec<BlockItem<'p>>) -> Func<'p> {
+    fn func_impl(_i: Token, name: Token, _lp: Token, params: Vec<Declaration<'p>>, _rp: Token, stmts: Vec<BlockItem<'p>>) -> Func<'p> {
         Func { name: name.str(), params, stmts: Some(stmts) }
     }
     #[rule = "Func -> Int Id LPar Params RPar Semi"]
-    fn func(_i: Token, name: Token, _lp: Token, params: Vec<Declaration<'p>>, _rp: Token, _s: Token) -> Func<'p> {
+    fn func_def(_i: Token, name: Token, _lp: Token, params: Vec<Declaration<'p>>, _rp: Token, _s: Token) -> Func<'p> {
         Func { name: name.str(), params, stmts: None }
     }
     #[rule = "Params -> "]

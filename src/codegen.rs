@@ -3,6 +3,18 @@ use std::io::{Result, Write};
 use crate::{ast::BinaryOp::*, ast::UnaryOp::*, ir::*};
 
 pub fn write_asm(p: &IrProg, w: &mut impl Write) -> Result<()> {
+    writeln!(w, "    .data")?;
+    for (name, val) in &p.global_initialized {
+        writeln!(w, "    .globl {}", name)?;
+        writeln!(w, "    .align 4")?;
+        writeln!(w, "    .size {}, 4", name)?;
+        writeln!(w, "{}:", name)?;
+        writeln!(w, "    .word {}", val)?;
+    }
+    writeln!(w, "    .bss")?;
+    for name in &p.global_uninitialized {
+        writeln!(w, "    .comm {}, 4, 4", name)?;
+    }
     for f in &p.funcs {
         write_func(&f, w)?;
     }
@@ -104,6 +116,11 @@ pub fn write_func(f: &IrFunc, w: &mut impl Write) -> Result<()> {
                 writeln!(w, "  call {}", name)?;
                 writeln!(w, "  addi sp, sp, {}", 4 * ((*num as i32) - 1))?;
                 writeln!(w, "  sw a0, 0(sp)")?;
+            }
+            IrStmt::GlobalAddr(name) => {
+                writeln!(w, "  addi sp, sp, -4")?;
+                writeln!(w, "  la t1, {}", name)?;
+                writeln!(w, "  sw t1, 0(sp)")?;
             }
         }
     }

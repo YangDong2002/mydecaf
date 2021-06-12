@@ -1,6 +1,12 @@
 #[derive(Debug)]
 pub struct Prog<'a> {
-    pub funcs: Vec<Func<'a>>,
+    pub contents: Vec<FuncDecl<'a>>,
+}
+
+#[derive(Debug)]
+pub enum FuncDecl<'a> {
+    Func(Func<'a>),
+    Decl(Declaration<'a>),
 }
 
 #[derive(Debug)]

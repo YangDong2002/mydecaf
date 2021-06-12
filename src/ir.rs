@@ -1,10 +1,13 @@
 use std::collections::HashMap;
 
 use crate::ast::*;
+use crate::consteval::const_expr;
 
 #[derive(Debug)]
 pub struct IrProg<'a> {
     pub funcs: Vec<IrFunc<'a>>,
+    pub global_initialized: Vec<(&'a str, i32)>,
+    pub global_uninitialized: Vec<&'a str>,
 }
 
 #[derive(Debug)]
@@ -15,16 +18,19 @@ pub struct IrFunc<'a> {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum FuncStatus {
-    Declared,
-    Implemented,
+pub enum NameStatus {
+    FuncDeclared(usize, usize),
+    // position, #args
+    FuncImplemented(usize, usize),
+    // position, #args
+    Var(Option<i32>), // optional initial value
 }
 
 #[derive(Debug)]
 pub struct Context<'a> {
+    pub globals: HashMap<&'a str, NameStatus>,
     pub vars: Vec<HashMap<&'a str, i32>>,
     pub break_continue: Vec<(u32, u32)>,
-    pub func_decl: HashMap<&'a str, (FuncStatus, (usize, usize))>,
     pub label: u32,
     pub depth: u32,
 }
@@ -47,6 +53,7 @@ pub enum IrStmt {
     Binary(BinaryOp),
     Ret,
     FrameAddr(i32),
+    GlobalAddr(String),
     Load,
     Store,
     Pop,
@@ -60,9 +67,9 @@ pub enum IrStmt {
 impl<'a> Context<'a> {
     pub fn new() -> Context<'a> {
         Context {
+            globals: HashMap::new(),
             vars: vec![],
             break_continue: vec![],
-            func_decl: HashMap::new(),
             label: 0,
             depth: 0,
         }
@@ -72,31 +79,54 @@ impl<'a> Context<'a> {
 pub fn ast2ir<'a>(p: &'a Prog<'a>) -> IrProg<'a> {
     let mut ctx = Context::new();
     let mut irfunc: Vec<IrFunc> = vec![];
+    let mut global_initialized: Vec<(&str, i32)> = vec![];
+    let mut global_uninitialized: Vec<&str> = vec![];
     let mut has_main = false;
-    for (id, f) in p.funcs.iter().enumerate() {
-        if f.name == "main" { has_main = true; }
-        match f.stmts {
-            None => {
-                if let Some((status, (num, _cnt))) = ctx.func_decl.get(f.name) {
-                    panic!("Function {} is already {:?} in #{}, but got defined again in #{}", f.name, status, num, id);
-                }
-                ctx.func_decl.insert(f.name, (FuncStatus::Declared, (id, f.params.len())));
-            }
-            Some(_) => {
-                if let Some((status, (num, _cnt))) = ctx.func_decl.get(f.name) {
-                    if *status == FuncStatus::Implemented {
-                        panic!("Function {} is already implemented in #{}, but is implemented again in #{}", f.name, num, id);
-                    } else if p.funcs[*num].params.len() != f.params.len() {
-                        panic!("Function {} is declared to have {} parameters in #{}, but has {} parameters when implemented in #{}", f.name, p.funcs[*num].params.len(), num, f.params.len(), id);
+    for (id, x) in p.contents.iter().enumerate() {
+        match x {
+            FuncDecl::Func(f) => {
+                if f.name == "main" { has_main = true; }
+                match f.stmts {
+                    None => {
+                        if let Some(_) = ctx.globals.get(f.name) {
+                            panic!("Redefinition of name {} as a function!", f.name);
+                        }
+                        ctx.globals.insert(f.name, NameStatus::FuncDeclared(id, f.params.len()));
+                    }
+                    Some(_) => {
+                        match ctx.globals.get(f.name) {
+                            Some(NameStatus::FuncDeclared(num, expected)) => {
+                                if f.params.len() != *expected {
+                                    panic!("Function {} is declared to have {} parameters in #{}, but has {} parameters when implemented in #{}", f.name, expected, num, f.params.len(), id);
+                                }
+                            }
+                            None => {}
+                            _ => { panic!("Name {} is already declared/implemented!", f.name); }
+                        }
+                        ctx.globals.insert(f.name, NameStatus::FuncImplemented(id, f.params.len()));
+                        irfunc.push(func(f, &mut ctx));
                     }
                 }
-                ctx.func_decl.insert(f.name, (FuncStatus::Implemented, (id, f.params.len())));
-                irfunc.push(func(f, &mut ctx));
+            }
+            FuncDecl::Decl(d) => {
+                if ctx.globals.contains_key(d.name) { panic!("Redefinition of global variable {}", d.name) }
+                match &d.val {
+                    None => {
+                        ctx.globals.insert(d.name, NameStatus::Var(None));
+                        global_uninitialized.push(d.name);
+                    }
+                    Some(x) => {
+                        let ret = const_expr(x);
+                        if let Err(()) = ret { panic!("Global variable {} is not initialized to a constant expression!", d.name) }
+                        ctx.globals.insert(d.name, NameStatus::Var(Some(ret.unwrap())));
+                        global_initialized.push((d.name, ret.unwrap()));
+                    }
+                }
             }
         }
     }
     if !has_main { panic!("No main function!") }
-    IrProg { funcs: irfunc }
+    IrProg { funcs: irfunc, global_initialized, global_uninitialized }
 }
 
 fn func<'a>(f: &Func<'a>, ctx: &mut Context<'a>) -> IrFunc<'a> {
@@ -271,6 +301,10 @@ fn expr<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, e: &Expr) {
                 expr(stmts, ctx, &**val);
                 stmts.push(IrStmt::FrameAddr(x));
                 stmts.push(IrStmt::Store);
+            } else if let Some(NameStatus::Var(_)) = ctx.globals.get(name) {
+                expr(stmts, ctx, &**val);
+                stmts.push(IrStmt::GlobalAddr(String::from(*name)));
+                stmts.push(IrStmt::Store);
             } else {
                 panic!("Variable {} is assigned a value before declaration!", name);
             }
@@ -355,12 +389,19 @@ fn unary<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, u: &Unary) {
             stmts.push(IrStmt::Unary(*op));
         }
         Unary::Call(name, params) => {
-            if !ctx.func_decl.contains_key(*name) {
-                panic!("Function {} is used before declaration/implementation!", *name);
-            }
-            let expected = ctx.func_decl.get(*name).unwrap().1.1;
-            if expected != params.len() {
-                panic!("Function {} requires {} parameters, but {} is given!", *name, expected, params.len());
+            match ctx.globals.get(*name) {
+                None => { panic!("Function {} is used before declaration/implementation!", *name); }
+                Some(NameStatus::Var(_)) => { panic!("Global variable {} used as a function!", *name); }
+                Some(NameStatus::FuncDeclared(_, expected)) => {
+                    if *expected != params.len() {
+                        panic!("Function {} requires {} parameters, but {} is given!", *name, expected, params.len());
+                    }
+                }
+                Some(NameStatus::FuncImplemented(_, expected)) => {
+                    if *expected != params.len() {
+                        panic!("Function {} requires {} parameters, but {} is given!", *name, expected, params.len());
+                    }
+                }
             }
             for arg in params.iter().rev() {
                 expr(stmts, ctx, arg);
@@ -379,8 +420,20 @@ fn primary<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, p: &Primary) {
             expr(stmts, ctx, e);
         }
         Primary::Identifier(name) => {
-            stmts.push(IrStmt::FrameAddr(ctx.name_resolution(name).expect(&format!("Name {} is used before declaration!", name))));
-            stmts.push(IrStmt::Load);
+            match ctx.name_resolution(name) {
+                Some(x) => {
+                    stmts.push(IrStmt::FrameAddr(x));
+                    stmts.push(IrStmt::Load);
+                }
+                None => {
+                    if let Some(NameStatus::Var(_)) = ctx.globals.get(name) {
+                        stmts.push(IrStmt::GlobalAddr(String::from(*name)));
+                        stmts.push(IrStmt::Load);
+                    } else {
+                        panic!("Name {} is used before declaration!", name);
+                    }
+                }
+            }
         }
     }
 }
