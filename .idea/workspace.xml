@@ -12,8 +12,9 @@
     <cargoProject FILE="$PROJECT_DIR$/Cargo.toml" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="9e896d9c-b00e-4a9f-86fd-46caf03dfd6a" name="Default Changelist" comment="Step 9, fix #1">
-      <change beforePath="$PROJECT_DIR$/src/codegen.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/codegen.rs" afterDir="false" />
+    <list default="true" id="9e896d9c-b00e-4a9f-86fd-46caf03dfd6a" name="Default Changelist" comment="Step 9, fix #2">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/check.sh" beforeDir="false" afterPath="$PROJECT_DIR$/check.sh" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -250,7 +251,14 @@
       <option name="project" value="LOCAL" />
       <updated>1623487705692</updated>
     </task>
-    <option name="localTasksCounter" value="18" />
+    <task id="LOCAL-00018" summary="Step 9, fix #2">
+      <created>1623487807491</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1623487807491</updated>
+    </task>
+    <option name="localTasksCounter" value="19" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -286,7 +294,8 @@
     <MESSAGE value="Step 8 fix #5" />
     <MESSAGE value="Step 9" />
     <MESSAGE value="Step 9, fix #1" />
-    <option name="LAST_COMMIT_MESSAGE" value="Step 9, fix #1" />
+    <MESSAGE value="Step 9, fix #2" />
+    <option name="LAST_COMMIT_MESSAGE" value="Step 9, fix #2" />
     <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REFORMAT_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REARRANGE_BEFORE_PROJECT_COMMIT" value="true" />

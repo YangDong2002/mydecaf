@@ -1,1 +1,1 @@
-STEP_UNTIL=8 ../minidecaf-tests/check.sh
+STEP_UNTIL=9 ../minidecaf-tests/check.sh
