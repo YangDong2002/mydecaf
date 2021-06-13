@@ -140,14 +140,15 @@ pub fn const_unary(r: &Unary) -> Result<ConstResult, ()> {
         }
         Unary::Prim(p) => { const_primary(p) }
         Unary::ExplicitConversion(typ, val) => {
-            Ok(ConstResult { val: const_unary(&*val)?.val, typ: *typ })
+            Ok(ConstResult { val: const_unary(&*val)?.val, typ: typ.clone() })
         }
+        Unary::Index(_, _) => { Err(()) }
     }
 }
 
 pub fn const_primary(p: &Primary) -> Result<ConstResult, ()> {
     match p {
-        Primary::Int(x, _) => { Ok(ConstResult { val: *x, typ: Type { cnt: 0 } }) }
+        Primary::Int(x, _) => { Ok(ConstResult { val: *x, typ: SCALAR }) }
         Primary::Braced(x) => { const_expr(&*x) }
         Primary::Identifier(_) => { Err(()) }
     }

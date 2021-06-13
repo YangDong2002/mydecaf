@@ -41,6 +41,8 @@ priority = [
 '\)' = 'RPar'
 '\{' = 'LBrc'
 '\}' = 'RBrc'
+'\[' = 'LBkt'
+'\]' = 'RBkt'
 '==' = 'Eq'
 '=' = 'Eqto'
 ':' = 'Colon'
@@ -76,9 +78,9 @@ impl<'p> Parser {
     #[rule = "Prog ->"]
     fn prog_empty() -> Prog<'p> { Prog { contents: vec![] } }
     #[rule = "Type -> Int"]
-    fn type_int(_: Token) -> Type { Type { cnt: 0 } }
+    fn type_int(_: Token) -> Type { SCALAR }
     #[rule = "Type -> Type Mul"]
-    fn type_pointer(t: Type, _: Token) -> Type { Type { cnt: t.cnt + 1 } }
+    fn type_pointer(t: Type, _: Token) -> Type { Type { cnt: t.cnt + 1, dim: t.dim } }
     #[rule = "Func -> Type Id LPar Params RPar Compound"]
     fn func_impl(typ: Type, name: Token, _lp: Token, params: Vec<Declaration<'p>>, _rp: Token, stmts: Vec<BlockItem<'p>>) -> Func<'p> {
         Func { name: name.str(), params, stmts: Some(stmts), ret: typ }
@@ -156,13 +158,19 @@ impl<'p> Parser {
     fn maybe_expr_empty() -> Option<Expr<'p>> { None }
     #[rule = "MaybeExpr -> Expr"]
     fn maybe_expr_full(x: Expr<'p>) -> Option<Expr<'p>> { Some(x) }
-    #[rule = "Declaration -> Type Id Semi"]
-    fn declaration_uninitialized(typ: Type, iden: Token, _s: Token) -> Declaration<'p> {
-        Declaration { name: iden.str(), val: None, typ: Type { cnt: typ.cnt } }
+    #[rule = "Declaration -> Type Id Dim Semi"]
+    fn declaration_uninitialized(typ: Type, iden: Token, dim: Vec<usize>, _s: Token) -> Declaration<'p> {
+        Declaration { name: iden.str(), val: None, typ: Type { cnt: typ.cnt, dim } }
     }
     #[rule = "Declaration -> Type Id Eqto Expr Semi"]
     fn declaration_initialized(typ: Type, iden: Token, _e: Token, e: Expr<'p>, _s: Token) -> Declaration<'p> {
-        Declaration { name: iden.str(), val: Some(e), typ: Type { cnt: typ.cnt } }
+        Declaration { name: iden.str(), val: Some(e), typ: Type { cnt: typ.cnt, dim: vec![] } }
+    }
+    #[rule = "Dim ->"]
+    fn dim_empty() -> Vec<usize> { vec![] }
+    #[rule = "Dim -> Dim LBkt IntConst RBkt"]
+    fn dim_last(mut d: Vec<usize>, _lb: Token, x: Token, _rb: Token) -> Vec<usize> {
+        (d.push(x.parse()), d).1
     }
     #[rule = "Expr -> Cond"]
     fn expr_cond(cond: Conditional<'p>) -> Expr<'p> { Expr::Cond(cond) }
@@ -224,10 +232,16 @@ impl<'p> Parser {
     fn mult_mod(m: Multiplicative<'p>, _: Token, u: Unary<'p>) -> Multiplicative<'p> {
         Multiplicative::Mul(Box::new(m), BinaryOp::Mod, u)
     }
-    #[rule = "Unary -> Primary"]
-    fn unary_p(p: Primary<'p>) -> Unary<'p> { Unary::Prim(p) }
-    #[rule = "Unary -> Id LPar ExprList RPar"]
-    fn unary_call(name: Token, _lp: Token, exprlist: Vec<Expr<'p>>, _rp: Token) -> Unary<'p> {
+    #[rule = "Unary -> Postfix"]
+    fn unary_postfix(p: Unary<'p>) -> Unary<'p> { p }
+    #[rule = "Postfix -> Primary"]
+    fn postfix_primary(p: Primary<'p>) -> Unary<'p> { Unary::Prim(p) }
+    #[rule = "Postfix -> Postfix LBkt Expr RBkt"]
+    fn postfix_index(p: Unary<'p>, _lb: Token, e: Expr<'p>, _rb: Token) -> Unary<'p> {
+        Unary::Index(Box::new(p), Box::new(e))
+    }
+    #[rule = "Postfix -> Id LPar ExprList RPar"]
+    fn postfix_call(name: Token, _lp: Token, exprlist: Vec<Expr<'p>>, _rp: Token) -> Unary<'p> {
         Unary::Call(name.str(), exprlist)
     }
     #[rule = "Unary -> Sub Unary"]
@@ -250,6 +264,7 @@ impl<'p> Parser {
     #[rule = "Unary -> And Unary"]
     fn unary_ref(_: Token, u: Unary<'p>) -> Unary<'p> { Unary::Uop(UnaryOp::Ref, Box::new(u)) }
     #[rule = "Unary -> LPar Type RPar Unary"]
+    #[prec = "Else"]
     fn unary_conversion(_lp: Token, typ: Type, _rp: Token, u: Unary<'p>) -> Unary<'p> { Unary::ExplicitConversion(typ, Box::new(u)) }
     #[rule = "Primary -> IntConst"]
     fn prim_int(i: Token) -> Primary<'p> {

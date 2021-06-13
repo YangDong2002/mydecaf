@@ -6,7 +6,7 @@ use crate::consteval::const_expr;
 #[derive(Debug)]
 pub struct IrProg<'a> {
     pub funcs: Vec<IrFunc<'a>>,
-    pub globals: Vec<(&'a str, i32)>,
+    pub globals: Vec<(&'a str, (i32, usize))>,
 }
 
 #[derive(Debug)]
@@ -32,13 +32,13 @@ pub struct FunctionSignature {
 impl FunctionSignature {
     pub fn from(f: &Func) -> FunctionSignature {
         FunctionSignature {
-            ret: f.ret,
-            args: f.params.iter().map(|x| x.typ).collect(),
+            ret: f.ret.clone(),
+            args: f.params.iter().map(|x| x.typ.clone()).collect(),
         }
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VarInfo {
     pub addr: i32,
     pub typ: Type,
@@ -56,12 +56,12 @@ pub struct Context<'a> {
 impl<'a> Context<'a> {
     pub fn name_resolution(&self, name: &'a str) -> Option<(IrStmt, Type)> {
         for mp in self.vars.iter().rev() {
-            if let Some(&x) = mp.get(name) {
-                return Some((IrStmt::FrameAddr(x.addr), x.typ));
+            if let Some(x) = mp.get(name) {
+                return Some((IrStmt::FrameAddr(x.addr), x.typ.clone()));
             }
         }
         if let Some(NameStatus::Var(typ)) = self.globals.get(name) {
-            return Some((IrStmt::GlobalAddr(String::from(name)), *typ))
+            return Some((IrStmt::GlobalAddr(String::from(name)), typ.clone()))
         }
         None
     }
@@ -100,7 +100,7 @@ impl<'a> Context<'a> {
 pub fn ast2ir<'a>(p: &'a Prog<'a>) -> IrProg<'a> {
     let mut ctx = Context::new();
     let mut irfunc: Vec<IrFunc> = vec![];
-    let mut globals: Vec<(&str, i32)> = vec![];
+    let mut globals: Vec<(&str, (i32, usize))> = vec![];
     let mut has_main = false;
     for x in p.contents.iter() {
         match x {
@@ -133,14 +133,15 @@ pub fn ast2ir<'a>(p: &'a Prog<'a>) -> IrProg<'a> {
                 if ctx.globals.contains_key(d.name) { panic!("Redefinition of global variable {}", d.name) }
                 match &d.val {
                     None => {
-                        ctx.globals.insert(d.name, NameStatus::Var(d.typ));
-                        globals.push((d.name, 0));
+                        ctx.globals.insert(d.name, NameStatus::Var(d.typ.clone()));
+                        globals.push((d.name, (0, d.typ.dim.iter().product())));
                     }
                     Some(x) => {
                         let result = const_expr(x).expect(&format!("Global variable {} is not initialized to a constant expression!", d.name));
+                        assert_eq!(d.typ.dim, vec![]);
                         if d.typ != result.typ { panic!("Initializing {} with an expression of type 'int'", d.typ); }
-                        ctx.globals.insert(d.name, NameStatus::Var(d.typ));
-                        globals.push((d.name, result.val));
+                        ctx.globals.insert(d.name, NameStatus::Var(d.typ.clone()));
+                        globals.push((d.name, (result.val, d.typ.dim.iter().product())));
                     }
                 }
             }
@@ -157,19 +158,19 @@ fn func<'a>(f: &Func<'a>, ctx: &mut Context<'a>) -> IrFunc<'a> {
         if args.contains_key(decl.name) {
             panic!("Argument name {} appears twice in function {}", decl.name, f.name);
         }
-        args.insert(decl.name, VarInfo { addr: -(id as i32) - 1, typ: decl.typ });
+        args.insert(decl.name, VarInfo { addr: -(id as i32) - 1, typ: decl.typ.clone() });
     }
     ctx.vars.push(args);
-    let locals: u32 = compound(&mut stmts, ctx, f.stmts.as_ref().unwrap(), f.ret);
+    let locals: u32 = compound(&mut stmts, ctx, f.stmts.as_ref().unwrap(), &f.ret);
     ctx.vars.pop();
     IrFunc { name: f.name, stmts, locals }
 }
 
-fn statement<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, st: &Stmt<'a>, return_type: Type) -> u32 {
+fn statement<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, st: &Stmt<'a>, return_type: &Type) -> u32 {
     match st {
         Stmt::Ret(r) => {
-            let typ = expr(stmts, ctx, &r, false);
-            if typ != return_type { panic!("Expect return type {}, but {} provided", return_type, typ) }
+            let ret_type = expr(stmts, ctx, &r, false);
+            if ret_type != *return_type { panic!("Expect return type {}, but {} provided", return_type, ret_type) }
             stmts.push(IrStmt::Ret);
             ctx.depth
         }
@@ -181,8 +182,8 @@ fn statement<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, st: &Stmt<'a>, 
             ctx.depth
         }
         Stmt::If(cond, if_expr, op) => {
-            let condition_type = expr(stmts, ctx, cond, false);
-            if condition_type.cnt > 0 { panic!("Cannot use {} as condition in {:?}", condition_type, st) }
+            let cond_type = expr(stmts, ctx, cond, false);
+            if cond_type != SCALAR { panic!("Cannot use {} as condition in {:?}", cond_type, st) }
             let no = ctx.label;
             let mut max_depth: u32 = ctx.depth;
             if let Some(x) = op {
@@ -209,10 +210,8 @@ fn statement<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, st: &Stmt<'a>, 
             ctx.label = no + 3;
             ctx.break_continue.push((no + 2, no));
             if let Some(x) = cond {
-                let typ = expr(stmts, ctx, &*x, false);
-                if typ.cnt > 0 {
-                    panic!("Type {} cannot be used as condition in {:?}.", typ, st)
-                }
+                let cond_type = expr(stmts, ctx, &*x, false);
+                if cond_type != SCALAR { panic!("Cannot use {} as condition in {:?}", cond_type, x) }
                 stmts.push(IrStmt::Beqz(no + 2));
             }
             stmts.push(IrStmt::Label(no + 1));
@@ -239,8 +238,8 @@ fn statement<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, st: &Stmt<'a>, 
             stmts.push(IrStmt::Label(no));
             let ret = statement(stmts, ctx, &**body, return_type);
             stmts.push(IrStmt::Label(no + 1)); // continue
-            let condition_type = expr(stmts, ctx, cond, false);
-            if condition_type.cnt > 0 { panic!("Cannot use {} as condition in {:?}", condition_type, st) }
+            let cond_type = expr(stmts, ctx, cond, false);
+            if cond_type != SCALAR { panic!("Cannot use {} as condition in {:?}", cond_type, st) }
             stmts.push(IrStmt::Bnez(no));
             stmts.push(IrStmt::Label(no + 2)); // break
             ctx.break_continue.pop();
@@ -271,7 +270,7 @@ fn statement<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, st: &Stmt<'a>, 
     }
 }
 
-fn compound<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, com: &Vec<BlockItem<'a>>, return_type: Type) -> u32 {
+fn compound<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, com: &Vec<BlockItem<'a>>, return_type: &Type) -> u32 {
     let mut max_depth = ctx.depth;
     ctx.vars.push(HashMap::new());
     for x in com {
@@ -285,9 +284,10 @@ fn compound<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, com: &Vec<BlockI
                 } else if ctx.vars.len() == 2 && ctx.vars[0].contains_key(e.name) {
                     panic!("Variable {} is defined as function parameter", e.name);
                 } else {
-                    ctx.vars.last_mut().unwrap().insert(e.name, VarInfo { addr: ctx.depth as i32, typ: e.typ });
+                    ctx.vars.last_mut().unwrap().insert(e.name, VarInfo { addr: ctx.depth as i32, typ: e.typ.clone() });
                     ctx.depth += 1;
                     if let Some(x) = &e.val {
+                        assert_eq!(e.typ.dim, vec![]);
                         let rhs_type = expr(stmts, ctx, &x, false);
                         if rhs_type != e.typ { panic!("Invalid assignment in {:?}: {} <- {}.", e, e.typ, rhs_type) }
                         stmts.push(IrStmt::FrameAddr(ctx.vars.last().unwrap().get(e.name).unwrap().addr));
@@ -311,7 +311,7 @@ fn conditional<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, o: &Condition
             let no: u32 = ctx.label;
             ctx.label = no + 2;
             let cond_type = logical_or(stmts, ctx, &cond, false);
-            if cond_type.cnt > 0 { panic!("Expression {:?} Used type {} where boolean type is required", cond, cond_type) }
+            if cond_type != SCALAR { panic!("Cannot use {} as condition in {:?}", cond_type, cond) }
             stmts.push(IrStmt::Beqz(no));
             let t_type = expr(stmts, ctx, &t, lvalue);
             stmts.push(IrStmt::Br(no + 1));
@@ -328,11 +328,11 @@ fn expr<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, e: &Expr, lvalue: bo
     match e {
         Expr::Assign(u, val) => {
             if lvalue { panic!("Result of assign expression {:?} cannot be used as a lvalue!", e) }
-            let rtype = expr(stmts, ctx, &**val, false);
-            let ltype = unary(stmts, ctx, u, true);
-            if ltype != rtype { panic!("Operands of assign expression do not have the same type: {} and {}", ltype, rtype) }
+            let l = expr(stmts, ctx, &**val, false);
+            let r = unary(stmts, ctx, u, true);
+            if l != r || l.dim.len() > 0 { panic!("No matching operator '=' for {:?} and {:?}", l, r) }
             stmts.push(IrStmt::Store);
-            ltype
+            l
         }
         Expr::Cond(a) => {
             conditional(stmts, ctx, a, lvalue)
@@ -430,8 +430,9 @@ fn unary<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, u: &Unary, lvalue: 
         Unary::Uop(op, v) => {
             if *op == UnaryOp::Ref {
                 if lvalue { panic!("Reference expression {:?} cannot be used as a lvalue!", u); }
-                let ret = unary(stmts, ctx, v, true);
-                Type { cnt: ret.cnt + 1 }
+                let rhs = unary(stmts, ctx, v, true);
+                if rhs.dim.len() > 0 { panic!("Pointer to array is not supported! in {:?}", u) }
+                Type { cnt: rhs.cnt + 1, dim: vec![] }
             } else {
                 let ret = unary(stmts, ctx, v, if *op == UnaryOp::Deref { false } else { lvalue });
                 if !lvalue || *op != UnaryOp::Deref { stmts.push(IrStmt::Unary(*op)); }
@@ -451,20 +452,39 @@ fn unary<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, u: &Unary, lvalue: 
                         panic!("Function {} requires parameters of type {:?}, but {:?} is given!", *name, expected.args, args_type);
                     }
                     stmts.push(IrStmt::Call(String::from(*name), params.len()));
-                    expected.ret
+                    expected.ret.clone()
                 }
                 Some(NameStatus::FuncImplemented(expected)) => {
                     if args_type != expected.args {
                         panic!("Function {} requires parameters of type {:?}, but {:?} is given!", *name, expected.args, args_type);
                     }
                     stmts.push(IrStmt::Call(String::from(*name), params.len()));
-                    expected.ret
+                    expected.ret.clone()
                 }
             }
         }
         Unary::ExplicitConversion(typ, x) => {
-            let _ = unary(stmts, ctx, x, lvalue);
-            *typ
+            let old_type = unary(stmts, ctx, x, lvalue);
+            if old_type.dim.len() != 0 { panic!("Cannot convert arrays to other types.") }
+            typ.clone()
+        }
+        Unary::Index(x, idx) => {
+            let array = unary(stmts, ctx, x, false);
+            let index = expr(stmts, ctx, idx, false);
+            if index.dim.len() > 0 { panic!("Indexing using an array! {:?}", u) }
+            if array == SCALAR { panic!("Indexing a scalar value! {:?}", u) }
+            let rv = array.dim.len() <= 1;
+            if rv < lvalue { panic!("Trying to use {:?} as a lvalue!", u) }
+            let (new_type, siz) = if array.dim.len() == 0 {
+                (Type { cnt: array.cnt - 1, dim: vec![] }, 4)
+            } else {
+                (Type { cnt: array.cnt, dim: array.dim[1..].to_vec() }, array.dim[1..].to_vec().iter().product())
+            };
+            stmts.push(IrStmt::Const(siz as i32));
+            stmts.push(IrStmt::Binary(BinaryOp::Mul));
+            stmts.push(IrStmt::Binary(BinaryOp::Add));
+            if !lvalue { stmts.push(IrStmt::Load) }
+            new_type
         }
     }
 }
@@ -474,7 +494,7 @@ fn primary<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, p: &Primary, lval
         Primary::Int(i, _) => {
             if lvalue { panic!("Integer {} cannot be used as a lvalue", i); }
             stmts.push(IrStmt::Const(*i));
-            Type { cnt: 0 }
+            SCALAR
         }
         Primary::Braced(e) => {
             expr(stmts, ctx, e, lvalue)

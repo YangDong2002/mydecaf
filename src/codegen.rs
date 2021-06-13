@@ -3,11 +3,11 @@ use std::io::{Result, Write};
 use crate::{ast::BinaryOp::*, ast::UnaryOp::*, ir::*};
 
 pub fn write_asm(p: &IrProg, w: &mut impl Write) -> Result<()> {
-    for (name, val) in &p.globals {
+    for (name, (val, siz)) in &p.globals {
         writeln!(w, "    .data")?;
         writeln!(w, "    .globl {}", name)?;
         writeln!(w, "    .align 4")?;
-        writeln!(w, "    .size {}, 4", name)?;
+        writeln!(w, "    .size {}, {}", name, siz)?;
         writeln!(w, "{}:", name)?;
         writeln!(w, "    .word {}\n", val)?;
     }

@@ -3,14 +3,18 @@ pub struct Prog<'a> {
     pub contents: Vec<FuncDecl<'a>>,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Type {
     pub cnt: usize,
+    pub dim: Vec<usize>,
 }
+
+pub const SCALAR: Type = Type { cnt: 0, dim: vec![] };
 
 impl std::fmt::Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "'int{}'", "*".repeat(self.cnt))
+        let vs: Vec<String> = self.dim.iter().map(|x| format!("[{}]", x)).collect();
+        write!(f, "'int{}{}'", "*".repeat(self.cnt), vs.join(""))
     }
 }
 
@@ -51,7 +55,7 @@ pub enum Stmt<'a> {
 pub struct Declaration<'a> {
     pub typ: Type,
     pub name: &'a str,
-    pub val: Option<Expr<'a>>,
+    pub val: Option<Expr<'a>>
 }
 
 #[derive(Debug)]
@@ -107,7 +111,8 @@ pub enum Unary<'a> {
     Prim(Primary<'a>),
     Call(&'a str, Vec<Expr<'a>>),
     Uop(UnaryOp, Box<Unary<'a>>),
-    ExplicitConversion(Type, Box<Unary<'a>>)
+    ExplicitConversion(Type, Box<Unary<'a>>),
+    Index(Box<Unary<'a>>, Box<Expr<'a>>),
 }
 
 #[derive(Debug)]
@@ -127,16 +132,17 @@ pub enum UnaryOp {
 }
 
 pub fn unary_operation(op: UnaryOp, x: (Type, bool)) -> (Type, bool) {
+    if x.0.dim.len() > 0 { panic!("No matching unary operator {:?}! Operand is {}", op, x.0) }
     match op {
         UnaryOp::Ref => {
             unreachable!();
         }
         UnaryOp::Deref => {
             if x.0.cnt == 0 { panic!("Type {} cannot be dereferenced!", x.0) }
-            return (Type { cnt: x.0.cnt - 1 }, true)
+            return (Type { cnt: x.0.cnt - 1, dim: vec![] }, true)
         }
         _ => {
-            if x.0.cnt == 0 { return (Type { cnt: 0 }, false) }
+            if x.0.cnt == 0 { return (SCALAR, false) }
             panic!("No matching unary operator {:?}! Operand is {}", op, x.0)
         }
     }
@@ -159,7 +165,10 @@ pub enum BinaryOp {
 }
 
 pub fn binary_operation(op: BinaryOp, x: (Type, bool), y: (Type, bool)) -> (Type, bool) {
-    if x.0.cnt == 0 && y.0.cnt == 0 { return (Type { cnt: 0 }, false); }
-    if (op == BinaryOp::Eqt || op == BinaryOp::Neq) && x.0.cnt == y.0.cnt { return (Type { cnt: 0 }, false); }
+    if x.0 == SCALAR && y.0 == SCALAR { return (SCALAR, false); }
+    if x.0.dim.len() > 0 || y.0.dim.len() > 0 {
+        panic!("No matching binary operator {:?}! Operands are {:?} and {:?}", op, x, y);
+    }
+    if (op == BinaryOp::Eqt || op == BinaryOp::Neq) && x.0.cnt == y.0.cnt { return (SCALAR, false); }
     panic!("No matching binary operator {:?}! Operands are {:?} and {:?}", op, x, y)
 }
