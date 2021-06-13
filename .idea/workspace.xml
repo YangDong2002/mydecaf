@@ -12,8 +12,8 @@
     <cargoProject FILE="$PROJECT_DIR$/Cargo.toml" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="9e896d9c-b00e-4a9f-86fd-46caf03dfd6a" name="Default Changelist" comment="Step 11.c pointer equal &amp; neq">
-      <change afterPath="$PROJECT_DIR$/programs/step11_hack2.c" afterDir="false" />
+    <list default="true" id="9e896d9c-b00e-4a9f-86fd-46caf03dfd6a" name="Default Changelist" comment="Step 11.d Added return type checking">
+      <change afterPath="$PROJECT_DIR$/programs/step11_hack3.c" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/ir.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/ir.rs" afterDir="false" />
     </list>
@@ -89,7 +89,7 @@
       <command value="ls" />
     </option>
   </component>
-  <component name="RunManager" selected="Cargo.Test11_hack2">
+  <component name="RunManager" selected="Cargo.Test11_hack3">
     <configuration name="Run" type="CargoCommandRunConfiguration" factoryName="Cargo Command" nameIsGenerated="true">
       <option name="command" value="run programs/step11.c" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
@@ -165,6 +165,21 @@
         <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
       </method>
     </configuration>
+    <configuration name="Test11_hack3" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
+      <option name="command" value="run programs/step11_hack3.c" />
+      <option name="workingDirectory" value="file://$PROJECT_DIR$" />
+      <option name="channel" value="DEFAULT" />
+      <option name="requiredFeatures" value="true" />
+      <option name="allFeatures" value="false" />
+      <option name="emulateTerminal" value="false" />
+      <option name="backtrace" value="SHORT" />
+      <envs />
+      <option name="isRedirectInput" value="false" />
+      <option name="redirectInputPath" value="" />
+      <method v="2">
+        <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="Test9" type="CargoCommandRunConfiguration" factoryName="Cargo Command" singleton="false">
       <option name="command" value="run programs/step9.c" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
@@ -205,6 +220,7 @@
       <item itemvalue="Cargo.Run" />
       <item itemvalue="Cargo.Test11_hack1" />
       <item itemvalue="Cargo.Test11_hack2" />
+      <item itemvalue="Cargo.Test11_hack3" />
       <item itemvalue="Cargo.TestWrongArgs" />
       <item itemvalue="Cargo.Test11" />
       <item itemvalue="Cargo.Test9" />
@@ -229,7 +245,7 @@
       <workItem from="1620398586957" duration="235000" />
       <workItem from="1620398835153" duration="8974000" />
       <workItem from="1623377780732" duration="4531000" />
-      <workItem from="1623501791864" duration="21778000" />
+      <workItem from="1623501791864" duration="22576000" />
     </task>
     <task id="LOCAL-00001" summary="Start using CLion &amp; Code reformatting">
       <created>1620385898512</created>
@@ -434,7 +450,14 @@
       <option name="project" value="LOCAL" />
       <updated>1623570905828</updated>
     </task>
-    <option name="localTasksCounter" value="30" />
+    <task id="LOCAL-00030" summary="Step 11.d Added return type checking">
+      <created>1623571235515</created>
+      <option name="number" value="00030" />
+      <option name="presentableId" value="LOCAL-00030" />
+      <option name="project" value="LOCAL" />
+      <updated>1623571235515</updated>
+    </task>
+    <option name="localTasksCounter" value="31" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -480,7 +503,8 @@
     <MESSAGE value="Step 11.a lvalue and type check. &#10;Fix #1 wrong_args.c" />
     <MESSAGE value="Step 11.b basic pointer support" />
     <MESSAGE value="Step 11.c pointer equal &amp; neq" />
-    <option name="LAST_COMMIT_MESSAGE" value="Step 11.c pointer equal &amp; neq" />
+    <MESSAGE value="Step 11.d Added return type checking" />
+    <option name="LAST_COMMIT_MESSAGE" value="Step 11.d Added return type checking" />
     <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REFORMAT_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REARRANGE_BEFORE_PROJECT_COMMIT" value="true" />

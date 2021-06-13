@@ -181,7 +181,8 @@ fn statement<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, st: &Stmt<'a>, 
             ctx.depth
         }
         Stmt::If(cond, if_expr, op) => {
-            expr(stmts, ctx, cond, false);
+            let condition_type = expr(stmts, ctx, cond, false);
+            if condition_type.cnt > 0 { panic!("Cannot use {} as condition in {:?}", condition_type, st) }
             let no = ctx.label;
             let mut max_depth: u32 = ctx.depth;
             if let Some(x) = op {
@@ -208,7 +209,10 @@ fn statement<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, st: &Stmt<'a>, 
             ctx.label = no + 3;
             ctx.break_continue.push((no + 2, no));
             if let Some(x) = cond {
-                expr(stmts, ctx, &*x, false);
+                let typ = expr(stmts, ctx, &*x, false);
+                if typ.cnt > 0 {
+                    panic!("Type {} cannot be used as condition in {:?}.", typ, st)
+                }
                 stmts.push(IrStmt::Beqz(no + 2));
             }
             stmts.push(IrStmt::Label(no + 1));
@@ -235,7 +239,8 @@ fn statement<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, st: &Stmt<'a>, 
             stmts.push(IrStmt::Label(no));
             let ret = statement(stmts, ctx, &**body, return_type);
             stmts.push(IrStmt::Label(no + 1)); // continue
-            expr(stmts, ctx, cond, false);
+            let condition_type = expr(stmts, ctx, cond, false);
+            if condition_type.cnt > 0 { panic!("Cannot use {} as condition in {:?}", condition_type, st) }
             stmts.push(IrStmt::Bnez(no));
             stmts.push(IrStmt::Label(no + 2)); // break
             ctx.break_continue.pop();
@@ -283,7 +288,8 @@ fn compound<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, com: &Vec<BlockI
                     ctx.vars.last_mut().unwrap().insert(e.name, VarInfo { addr: ctx.depth as i32, typ: e.typ });
                     ctx.depth += 1;
                     if let Some(x) = &e.val {
-                        expr(stmts, ctx, &x, false);
+                        let rhs_type = expr(stmts, ctx, &x, false);
+                        if rhs_type != e.typ { panic!("Invalid assignment in {:?}: {} <- {}.", e, e.typ, rhs_type) }
                         stmts.push(IrStmt::FrameAddr(ctx.vars.last().unwrap().get(e.name).unwrap().addr));
                         stmts.push(IrStmt::Store);
                         stmts.push(IrStmt::Pop);
