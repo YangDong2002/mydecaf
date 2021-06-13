@@ -8,5 +8,8 @@ int add(int a, int b) {
 
 int main() {
     int sum = add(1 + 2, 4);
+    (o + ak ? sum : o) = 4;
+    if (o + ak) sum = 3; else bab = 43;
+
     return sum + sum + o;
 }

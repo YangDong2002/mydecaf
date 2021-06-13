@@ -435,14 +435,14 @@ fn unary<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, u: &Unary, lvalue: 
                 None => { panic!("Function {} is used before declaration/implementation!", *name); }
                 Some(NameStatus::Var(_)) => { panic!("Global variable {} used as a function!", *name); }
                 Some(NameStatus::FuncDeclared(expected)) => {
-                    if expected.args.iter().zip(args_type.iter()).any(|(x, y)| x.cnt != y.cnt) {
+                    if args_type != expected.args {
                         panic!("Function {} requires parameters of type {:?}, but {:?} is given!", *name, expected.args, args_type);
                     }
                     stmts.push(IrStmt::Call(String::from(*name), params.len()));
                     expected.ret
                 }
                 Some(NameStatus::FuncImplemented(expected)) => {
-                    if expected.args.iter().zip(args_type.iter()).any(|(x, y)| x.cnt != y.cnt) {
+                    if args_type != expected.args {
                         panic!("Function {} requires parameters of type {:?}, but {:?} is given!", *name, expected.args, args_type);
                     }
                     stmts.push(IrStmt::Call(String::from(*name), params.len()));
