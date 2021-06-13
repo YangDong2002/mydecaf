@@ -420,14 +420,14 @@ fn additive<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, a: &Additive, lv
                 stmts.append(&mut rhs);
                 stmts.push(IrStmt::Binary(*op));
             } else if x != SCALAR && y == SCALAR {
-                stmts.append(&mut rhs);
                 stmts.append(&mut lhs);
+                stmts.append(&mut rhs);
                 stmts.push(IrStmt::Const(4));
                 stmts.push(IrStmt::Binary(BinaryOp::Mul));
                 stmts.push(IrStmt::Binary(*op));
             } else if x == SCALAR && y != SCALAR && *op == BinaryOp::Add {
-                stmts.append(&mut lhs);
                 stmts.append(&mut rhs);
+                stmts.append(&mut lhs);
                 stmts.push(IrStmt::Const(4));
                 stmts.push(IrStmt::Binary(BinaryOp::Mul));
                 stmts.push(IrStmt::Binary(BinaryOp::Add));
