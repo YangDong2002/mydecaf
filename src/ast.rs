@@ -159,5 +159,7 @@ pub enum BinaryOp {
 }
 
 pub fn binary_operation(op: BinaryOp, x: (Type, bool), y: (Type, bool)) -> (Type, bool) {
-    if x.0.cnt == 0 && y.0.cnt == 0 { (Type { cnt: 0 }, false) } else { panic!("No matching binary operator {:?}! Operands are {:?} and {:?}", op, x, y) }
+    if x.0.cnt == 0 && y.0.cnt == 0 { return (Type { cnt: 0 }, false); }
+    if (op == BinaryOp::Eqt || op == BinaryOp::Neq) && x.0.cnt == y.0.cnt { return (Type { cnt: 0 }, false); }
+    panic!("No matching binary operator {:?}! Operands are {:?} and {:?}", op, x, y)
 }
