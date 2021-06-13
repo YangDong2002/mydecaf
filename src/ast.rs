@@ -3,6 +3,18 @@ pub struct Prog<'a> {
     pub contents: Vec<FuncDecl<'a>>,
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct Type {
+    pub cnt: usize,
+}
+
+impl std::fmt::Display for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "'int{}'", "*".repeat(self.cnt))
+    }
+}
+
+
 #[derive(Debug)]
 pub enum FuncDecl<'a> {
     Func(Func<'a>),
@@ -14,6 +26,7 @@ pub struct Func<'a> {
     pub name: &'a str,
     pub params: Vec<Declaration<'a>>,
     pub stmts: Option<Vec<BlockItem<'a>>>,
+    pub ret: Type
 }
 
 #[derive(Debug)]
@@ -36,13 +49,14 @@ pub enum Stmt<'a> {
 
 #[derive(Debug)]
 pub struct Declaration<'a> {
+    pub typ: Type,
     pub name: &'a str,
     pub val: Option<Expr<'a>>,
 }
 
 #[derive(Debug)]
 pub enum Expr<'a> {
-    Assign(&'a str, Box<Expr<'a>>),
+    Assign(Unary<'a>, Box<Expr<'a>>),
     Cond(Conditional<'a>),
 }
 
@@ -109,6 +123,9 @@ pub enum UnaryOp {
     UBNot,
 }
 
+pub fn unary_operation(op: UnaryOp, x: (Type, bool)) -> (Type, bool) {
+    if x.0.cnt == 0 { (Type { cnt: 0 }, false) } else { panic!("No matching unary operator {:?}! Operand is {:?}", op, x) }
+}
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum BinaryOp {
     Add,
@@ -124,4 +141,8 @@ pub enum BinaryOp {
     Lt,
     Eqt,
     Neq,
+}
+
+pub fn binary_operation(op: BinaryOp, x: (Type, bool), y: (Type, bool)) -> (Type, bool) {
+    if x.0.cnt == 0 && y.0.cnt == 0 { (Type { cnt: 0 }, false) } else { panic!("No matching binary operator {:?}! Operands are {:?} and {:?}", op, x, y) }
 }

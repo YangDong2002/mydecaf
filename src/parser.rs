@@ -74,25 +74,27 @@ impl<'p> Parser {
     }
     #[rule = "Prog ->"]
     fn prog_empty() -> Prog<'p> { Prog { contents: vec![] } }
-    #[rule = "Func -> Int Id LPar Params RPar Compound"]
-    fn func_impl(_i: Token, name: Token, _lp: Token, params: Vec<Declaration<'p>>, _rp: Token, stmts: Vec<BlockItem<'p>>) -> Func<'p> {
-        Func { name: name.str(), params, stmts: Some(stmts) }
+    #[rule = "Type -> Int"]
+    fn type_int(_: Token) -> Type { Type { cnt: 0 } }
+    #[rule = "Func -> Type Id LPar Params RPar Compound"]
+    fn func_impl(typ: Type, name: Token, _lp: Token, params: Vec<Declaration<'p>>, _rp: Token, stmts: Vec<BlockItem<'p>>) -> Func<'p> {
+        Func { name: name.str(), params, stmts: Some(stmts), ret: typ }
     }
-    #[rule = "Func -> Int Id LPar Params RPar Semi"]
-    fn func_def(_i: Token, name: Token, _lp: Token, params: Vec<Declaration<'p>>, _rp: Token, _s: Token) -> Func<'p> {
-        Func { name: name.str(), params, stmts: None }
+    #[rule = "Func -> Type Id LPar Params RPar Semi"]
+    fn func_def(typ: Type, name: Token, _lp: Token, params: Vec<Declaration<'p>>, _rp: Token, _s: Token) -> Func<'p> {
+        Func { name: name.str(), params, stmts: None, ret: typ }
     }
     #[rule = "Params -> "]
     fn param_empty() -> Vec<Declaration<'p>> { vec![] }
-    #[rule = "Params -> MaybeParams Int Id"]
-    fn param_last(mut fir: Vec<Declaration<'p>>, _int: Token, name: Token) -> Vec<Declaration<'p>> {
-        (fir.push(Declaration { name: name.str(), val: None }), fir).1
+    #[rule = "Params -> MaybeParams Type Id"]
+    fn param_last(mut fir: Vec<Declaration<'p>>, typ: Type, name: Token) -> Vec<Declaration<'p>> {
+        (fir.push(Declaration { name: name.str(), val: None, typ }), fir).1
     }
     #[rule = "MaybeParams -> "]
     fn maybeparams_empty() -> Vec<Declaration<'p>> { vec![] }
-    #[rule = "MaybeParams -> MaybeParams Int Id Comma"]
-    fn maybeparams_last(mut fir: Vec<Declaration<'p>>, _int: Token, name: Token, _comma: Token) -> Vec<Declaration<'p>> {
-        (fir.push(Declaration { name: name.str(), val: None }), fir).1
+    #[rule = "MaybeParams -> MaybeParams Type Id Comma"]
+    fn maybeparams_last(mut fir: Vec<Declaration<'p>>, typ: Type, name: Token, _comma: Token) -> Vec<Declaration<'p>> {
+        (fir.push(Declaration { name: name.str(), val: None, typ }), fir).1
     }
     #[rule = "Compound -> LBrc BlockItems RBrc"]
     fn compound(_l: Token, blk: Vec<BlockItem<'p>>, _r: Token) -> Vec<BlockItem<'p>> { blk }
@@ -151,13 +153,13 @@ impl<'p> Parser {
     fn maybe_expr_empty() -> Option<Expr<'p>> { None }
     #[rule = "MaybeExpr -> Expr"]
     fn maybe_expr_full(x: Expr<'p>) -> Option<Expr<'p>> { Some(x) }
-    #[rule = "Declaration -> Int Id Semi"]
-    fn declaration_uninitialized(_i: Token, iden: Token, _s: Token) -> Declaration<'p> {
-        Declaration { name: iden.str(), val: None }
+    #[rule = "Declaration -> Type Id Semi"]
+    fn declaration_uninitialized(typ: Type, iden: Token, _s: Token) -> Declaration<'p> {
+        Declaration { name: iden.str(), val: None, typ: Type { cnt: typ.cnt } }
     }
-    #[rule = "Declaration -> Int Id Eqto Expr Semi"]
-    fn declaration_initialized(_i: Token, iden: Token, _e: Token, e: Expr<'p>, _s: Token) -> Declaration<'p> {
-        Declaration { name: iden.str(), val: Some(e) }
+    #[rule = "Declaration -> Type Id Eqto Expr Semi"]
+    fn declaration_initialized(typ: Type, iden: Token, _e: Token, e: Expr<'p>, _s: Token) -> Declaration<'p> {
+        Declaration { name: iden.str(), val: Some(e), typ: Type { cnt: typ.cnt } }
     }
     #[rule = "Expr -> Cond"]
     fn expr_cond(cond: Conditional<'p>) -> Expr<'p> { Expr::Cond(cond) }
@@ -167,9 +169,9 @@ impl<'p> Parser {
     fn cond_cond(o: LogicalOr<'p>, _q: Token, true_exp: Expr<'p>, _c: Token, false_cond: Conditional<'p>) -> Conditional<'p> {
         Conditional::Cond(o, Box::new(true_exp), Box::new(false_cond))
     }
-    #[rule = "Expr -> Id Eqto Expr"]
-    fn expr_assign(a: Token, _b: Token, c: Expr<'p>) -> Expr<'p> {
-        Expr::Assign(a.str(), Box::new(c))
+    #[rule = "Expr -> Unary Eqto Expr"]
+    fn expr_assign(u: Unary<'p>, _b: Token, c: Expr<'p>) -> Expr<'p> {
+        Expr::Assign(u, Box::new(c))
     }
     #[rule = "LogicalOr -> LogicalAnd"]
     fn lor_land(a: LogicalAnd<'p>) -> LogicalOr<'p> { LogicalOr::LAnd(a) }
