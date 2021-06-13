@@ -518,7 +518,7 @@ fn unary<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, u: &Unary, lvalue: 
             stmts.push(IrStmt::Const((siz * 4) as i32));
             stmts.push(IrStmt::Binary(BinaryOp::Mul));
             stmts.push(IrStmt::Binary(BinaryOp::Add));
-            if !lvalue { stmts.push(IrStmt::Load) }
+            if !lvalue && new_type.dim.len() == 0 { stmts.push(IrStmt::Load) }
             new_type
         }
     }

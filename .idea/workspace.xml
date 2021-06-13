@@ -12,7 +12,7 @@
     <cargoProject FILE="$PROJECT_DIR$/Cargo.toml" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="9e896d9c-b00e-4a9f-86fd-46caf03dfd6a" name="Default Changelist" comment="Step 12.b failcases passed">
+    <list default="true" id="9e896d9c-b00e-4a9f-86fd-46caf03dfd6a" name="Default Changelist" comment="Step 12.c index address offset size -&gt; size*4">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/programs/step12_hack1.c" beforeDir="false" afterPath="$PROJECT_DIR$/programs/step12_hack1.c" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/ir.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/ir.rs" afterDir="false" />
@@ -261,7 +261,7 @@
       <workItem from="1620398586957" duration="235000" />
       <workItem from="1620398835153" duration="8974000" />
       <workItem from="1623377780732" duration="4531000" />
-      <workItem from="1623501791864" duration="37706000" />
+      <workItem from="1623501791864" duration="38124000" />
     </task>
     <task id="LOCAL-00001" summary="Start using CLion &amp; Code reformatting">
       <created>1620385898512</created>
@@ -494,7 +494,14 @@
       <option name="project" value="LOCAL" />
       <updated>1623587327897</updated>
     </task>
-    <option name="localTasksCounter" value="34" />
+    <task id="LOCAL-00034" summary="Step 12.c index address offset size -&gt; size*4">
+      <created>1623587622485</created>
+      <option name="number" value="00034" />
+      <option name="presentableId" value="LOCAL-00034" />
+      <option name="project" value="LOCAL" />
+      <updated>1623587622485</updated>
+    </task>
+    <option name="localTasksCounter" value="35" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -517,7 +524,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="CHECK_CODE_CLEANUP_BEFORE_PROJECT_COMMIT" value="true" />
-    <MESSAGE value="Step 5, small fix" />
     <MESSAGE value="Step 6" />
     <MESSAGE value="Step 7" />
     <MESSAGE value="Step 8" />
@@ -542,7 +548,8 @@
     <MESSAGE value="Step 11.e Added type checking for if, while, for, =" />
     <MESSAGE value="Step 12.a initial commit, regression test first." />
     <MESSAGE value="Step 12.b failcases passed" />
-    <option name="LAST_COMMIT_MESSAGE" value="Step 12.b failcases passed" />
+    <MESSAGE value="Step 12.c index address offset size -&gt; size*4" />
+    <option name="LAST_COMMIT_MESSAGE" value="Step 12.c index address offset size -&gt; size*4" />
     <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REFORMAT_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REARRANGE_BEFORE_PROJECT_COMMIT" value="true" />
