@@ -515,7 +515,7 @@ fn unary<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, u: &Unary, lvalue: 
             } else {
                 (Type { cnt: array.cnt, dim: array.dim[1..].to_vec() }, array.dim[1..].to_vec().iter().product())
             };
-            stmts.push(IrStmt::Const(siz as i32));
+            stmts.push(IrStmt::Const((siz * 4) as i32));
             stmts.push(IrStmt::Binary(BinaryOp::Mul));
             stmts.push(IrStmt::Binary(BinaryOp::Add));
             if !lvalue { stmts.push(IrStmt::Load) }
