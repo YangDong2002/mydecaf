@@ -160,15 +160,16 @@ fn func<'a>(f: &Func<'a>, ctx: &mut Context<'a>) -> IrFunc<'a> {
         args.insert(decl.name, VarInfo { addr: -(id as i32) - 1, typ: decl.typ });
     }
     ctx.vars.push(args);
-    let locals: u32 = compound(&mut stmts, ctx, f.stmts.as_ref().unwrap());
+    let locals: u32 = compound(&mut stmts, ctx, f.stmts.as_ref().unwrap(), f.ret);
     ctx.vars.pop();
     IrFunc { name: f.name, stmts, locals }
 }
 
-fn statement<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, st: &Stmt<'a>) -> u32 {
+fn statement<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, st: &Stmt<'a>, return_type: Type) -> u32 {
     match st {
         Stmt::Ret(r) => {
-            expr(stmts, ctx, &r, false);
+            let typ = expr(stmts, ctx, &r, false);
+            if typ != return_type { panic!("Expect return type {}, but {} provided", return_type, typ) }
             stmts.push(IrStmt::Ret);
             ctx.depth
         }
@@ -186,21 +187,21 @@ fn statement<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, st: &Stmt<'a>) 
             if let Some(x) = op {
                 ctx.label = no + 2;
                 stmts.push(IrStmt::Beqz(no));
-                max_depth = std::cmp::max(max_depth, statement(stmts, ctx, &*if_expr));
+                max_depth = std::cmp::max(max_depth, statement(stmts, ctx, &*if_expr, return_type));
                 stmts.push(IrStmt::Br(no + 1));
                 stmts.push(IrStmt::Label(no));
-                max_depth = std::cmp::max(max_depth, statement(stmts, ctx, &*x));
+                max_depth = std::cmp::max(max_depth, statement(stmts, ctx, &*x, return_type));
                 stmts.push(IrStmt::Label(no + 1));
             } else {
                 ctx.label = no + 1;
                 stmts.push(IrStmt::Beqz(no));
-                max_depth = std::cmp::max(max_depth, statement(stmts, ctx, &*if_expr));
+                max_depth = std::cmp::max(max_depth, statement(stmts, ctx, &*if_expr, return_type));
                 stmts.push(IrStmt::Label(no));
             }
             max_depth
         }
         Stmt::Compound(com) => {
-            compound(stmts, ctx, &*com)
+            compound(stmts, ctx, &*com, return_type)
         }
         Stmt::For(cond, body, update) => {
             let no = ctx.label;
@@ -211,7 +212,7 @@ fn statement<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, st: &Stmt<'a>) 
                 stmts.push(IrStmt::Beqz(no + 2));
             }
             stmts.push(IrStmt::Label(no + 1));
-            let ret = statement(stmts, ctx, &**body);
+            let ret = statement(stmts, ctx, &**body, return_type);
             stmts.push(IrStmt::Label(no)); // continue
             if let Some(x) = update {
                 expr(stmts, ctx, &*x, false);
@@ -232,7 +233,7 @@ fn statement<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, st: &Stmt<'a>) 
             ctx.label = no + 3;
             ctx.break_continue.push((no + 2, no + 1));
             stmts.push(IrStmt::Label(no));
-            let ret = statement(stmts, ctx, &**body);
+            let ret = statement(stmts, ctx, &**body, return_type);
             stmts.push(IrStmt::Label(no + 1)); // continue
             expr(stmts, ctx, cond, false);
             stmts.push(IrStmt::Bnez(no));
@@ -265,13 +266,13 @@ fn statement<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, st: &Stmt<'a>) 
     }
 }
 
-fn compound<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, com: &Vec<BlockItem<'a>>) -> u32 {
+fn compound<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, com: &Vec<BlockItem<'a>>, return_type: Type) -> u32 {
     let mut max_depth = ctx.depth;
     ctx.vars.push(HashMap::new());
     for x in com {
         match x {
             BlockItem::Stmt(st) => {
-                max_depth = std::cmp::max(max_depth, statement(stmts, ctx, st));
+                max_depth = std::cmp::max(max_depth, statement(stmts, ctx, st, return_type));
             }
             BlockItem::Decl(e) => {
                 if ctx.vars.last().unwrap().contains_key(e.name) {
