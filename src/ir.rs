@@ -137,11 +137,10 @@ pub fn ast2ir<'a>(p: &'a Prog<'a>) -> IrProg<'a> {
                         globals.push((d.name, 0));
                     }
                     Some(x) => {
-                        let ret = const_expr(x);
-                        if let Err(()) = ret { panic!("Global variable {} is not initialized to a constant expression!", d.name); }
-                        if d.typ.cnt != 0 { panic!("Initializing {} with an expression of type 'int'", d.typ); }
+                        let result = const_expr(x).expect(&format!("Global variable {} is not initialized to a constant expression!", d.name));
+                        if d.typ != result.typ { panic!("Initializing {} with an expression of type 'int'", d.typ); }
                         ctx.globals.insert(d.name, NameStatus::Var(d.typ));
-                        globals.push((d.name, ret.unwrap()));
+                        globals.push((d.name, result.val));
                     }
                 }
             }
@@ -422,14 +421,20 @@ fn unary<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, u: &Unary, lvalue: 
     match u {
         Unary::Prim(p) => { primary(stmts, ctx, p, lvalue) }
         Unary::Uop(op, v) => {
-            let ret = unary(stmts, ctx, v, lvalue);
-            stmts.push(IrStmt::Unary(*op));
-            let (typ, rv) = unary_operation(*op, (ret, lvalue));
-            if rv < lvalue { panic!("Unary expression {:?} cannot be used as a lvalue!", u); }
-            typ
+            if *op == UnaryOp::Ref {
+                if lvalue { panic!("Reference expression {:?} cannot be used as a lvalue!", u); }
+                let ret = unary(stmts, ctx, v, true);
+                Type { cnt: ret.cnt + 1 }
+            } else {
+                let ret = unary(stmts, ctx, v, if *op == UnaryOp::Deref { false } else { lvalue });
+                if !lvalue || *op != UnaryOp::Deref { stmts.push(IrStmt::Unary(*op)); }
+                let (typ, rv) = unary_operation(*op, (ret, lvalue));
+                if rv < lvalue { panic!("Unary expression {:?} cannot be used as a lvalue!", u); }
+                typ
+            }
         }
         Unary::Call(name, params) => {
-            if lvalue { panic!("Function call {:?} cannot be used as a lvalue!"); }
+            if lvalue { panic!("Function call {:?} cannot be used as a lvalue!", u); }
             let args_type: Vec<Type> = params.iter().rev().map(|x| expr(stmts, ctx, x, false)).collect();
             match ctx.globals.get(*name) {
                 None => { panic!("Function {} is used before declaration/implementation!", *name); }
@@ -449,6 +454,10 @@ fn unary<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, u: &Unary, lvalue: 
                     expected.ret
                 }
             }
+        }
+        Unary::ExplicitConversion(typ, x) => {
+            let _ = unary(stmts, ctx, x, lvalue);
+            *typ
         }
     }
 }
@@ -477,173 +486,3 @@ fn primary<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, p: &Primary, lval
         }
     }
 }
-/*
-fn conditional_address<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, o: &Conditional) -> Type {
-    match o {
-        Conditional::LOr(a) => { logical_or_address(stmts, ctx, &a) }
-        Conditional::Cond(cond, t, f) => {
-            let no: u32 = ctx.label;
-            ctx.label = no + 2;
-            logical_or_address(stmts, ctx, &cond);
-            stmts.push(IrStmt::Beqz(no));
-            expr_address(stmts, ctx, &t);
-            stmts.push(IrStmt::Br(no + 1));
-            stmts.push(IrStmt::Label(no));
-            conditional(stmts, ctx, f);
-            stmts.push(IrStmt::Label(no + 1));
-        }
-    }
-}
-
-fn expr_address<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, e: &Expr) -> Type {
-    match e {
-        Expr::Assign(u, val) => {
-            let rtype = expr(stmts, ctx, &**val);
-            let ltype = unary_lvalue(stmts, ctx, u);
-            if !ltype.lvalue { panic!("{:?} is not a lvalue!", u) }
-            for i in 0..ltype.cnt {
-                stmts.push(IrStmt::Load)
-            }
-
-            if let Some((ir, typ)) = ctx.name_resolution(name) {
-                let rhs = expr(stmts, ctx, &**val);
-                stmts.push(ir);
-                stmts.push(IrStmt::Store);
-            } else {
-                panic!("Variable {} is assigned a value before declaration!", name);
-            }
-        }
-        Expr::Cond(a) => {
-            conditional(stmts, ctx, a)
-        }
-    }
-}
-
-fn logical_or_address<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, e: &LogicalOr) -> Type {
-    match e {
-        LogicalOr::LAnd(a) => { logical_and(stmts, ctx, a) }
-        LogicalOr::Bop(a, op, b) => {
-            let x = logical_or(stmts, ctx, &**a);
-            let y = logical_and(stmts, ctx, b);
-            stmts.push(IrStmt::Binary(*op));
-            binary_operation(*op, x, y)
-        }
-    }
-}
-
-fn logical_and_address<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, e: &LogicalAnd) -> Type {
-    match e {
-        LogicalAnd::Eqn(a) => { equality(stmts, ctx, a) }
-        LogicalAnd::Bop(a, op, b) => {
-            let x = logical_and(stmts, ctx, &**a);
-            let y = equality(stmts, ctx, b);
-            stmts.push(IrStmt::Binary(*op));
-            binary_operation(*op, x, y)
-        }
-    }
-}
-
-fn equality_address<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, e: &Equality) -> Type {
-    match e {
-        Equality::Rel(a) => { relational(stmts, ctx, a) }
-        Equality::Bop(a, op, b) => {
-            let x = equality(stmts, ctx, &**a);
-            let y = relational(stmts, ctx, b);
-            stmts.push(IrStmt::Binary(*op));
-            binary_operation(*op, x, y)
-        }
-    }
-}
-
-fn relational_address<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, e: &Relational) -> Type {
-    match e {
-        Relational::Add(a) => { additive(stmts, ctx, a) }
-        Relational::Bop(a, op, b) => {
-            let x = relational(stmts, ctx, &**a);
-            let y = additive(stmts, ctx, b);
-            stmts.push(IrStmt::Binary(*op));
-            binary_operation(*op, x, y)
-        }
-    }
-}
-
-fn additive_address<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, a: &Additive) -> Type {
-    match a {
-        Additive::Mul(m) => { multiplicative(stmts, ctx, m) }
-        Additive::Bop(a, op, b) => {
-            let x = additive(stmts, ctx, &**a);
-            let y = multiplicative(stmts, ctx, b);
-            stmts.push(IrStmt::Binary(*op));
-            binary_operation(*op, x, y)
-        }
-    }
-}
-
-fn multiplicative_address<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, m: &Multiplicative) -> Type {
-    match m {
-        Multiplicative::U(u) => { unary(stmts, ctx, u) }
-        Multiplicative::Mul(m, op, a) => {
-            let x = multiplicative(stmts, ctx, &**m);
-            let y  =unary(stmts, ctx, a);
-            stmts.push(IrStmt::Binary(*op));
-            binary_operation(*op, x, y)
-        }
-    }
-}
-
-fn unary_address<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, u: &Unary) -> Type {
-    match u {
-        Unary::Prim(p) => { primary(stmts, ctx, p) }
-        Unary::Uop(op, v) => {
-            let ret = unary(stmts, ctx, v);
-            stmts.push(IrStmt::Unary(*op));
-            unary_operation(*op, ret)
-        }
-        Unary::Call(name, params) => {
-            let args_type: Vec<Type> = params.iter().rev().map(|x| expr(stmts, ctx, x)).collect();
-            match ctx.globals.get(*name) {
-                None => { panic!("Function {} is used before declaration/implementation!", *name); }
-                Some(NameStatus::Var(_)) => { panic!("Global variable {} used as a function!", *name); }
-                Some(NameStatus::FuncDeclared(expected)) => {
-                    if expected.args.iter().zip(args_type.iter()).any(|(x, y)| x.cnt != y.cnt) {
-                        panic!("Function {} requires parameters of type {:?}, but {:?} is given!", *name, expected.args, args_type);
-                    }
-                    stmts.push(IrStmt::Call(String::from(*name), params.len()));
-                    expected.ret
-                }
-                Some(NameStatus::FuncImplemented(expected)) => {
-                    if expected.args.iter().zip(args_type.iter()).any(|(x, y)| x.cnt != y.cnt) {
-                        panic!("Function {} requires parameters of type {:?}, but {:?} is given!", *name, expected.args, args_type);
-                    }
-                    stmts.push(IrStmt::Call(String::from(*name), params.len()));
-                    expected.ret
-                }
-            }
-        }
-    }
-}
-
-fn primary_address<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, p: &Primary) -> Type {
-    match p {
-        Primary::Int(i, _) => {
-            stmts.push(IrStmt::Const(*i));
-            Type { cnt: 0, lvalue: false }
-        }
-        Primary::Braced(e) => {
-            expr(stmts, ctx, e)
-        }
-        Primary::Identifier(name) => {
-            match ctx.name_resolution(name) {
-                Some((ir, typ)) => {
-                    stmts.push(ir);
-                    stmts.push(IrStmt::Load);
-                    typ
-                }
-                None => {
-                    panic!("Name {} is used before declaration!", name);
-                }
-            }
-        }
-    }
-}
-*/

@@ -11,5 +11,6 @@ int main() {
     (o + ak ? sum : o) = 4;
     if (o + ak) sum = 3; else bab = 43;
 
+
     return sum + sum + o;
 }

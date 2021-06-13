@@ -107,6 +107,7 @@ pub enum Unary<'a> {
     Prim(Primary<'a>),
     Call(&'a str, Vec<Expr<'a>>),
     Uop(UnaryOp, Box<Unary<'a>>),
+    ExplicitConversion(Type, Box<Unary<'a>>)
 }
 
 #[derive(Debug)]
@@ -121,10 +122,24 @@ pub enum UnaryOp {
     UNeg,
     UNot,
     UBNot,
+    Deref,
+    Ref,
 }
 
 pub fn unary_operation(op: UnaryOp, x: (Type, bool)) -> (Type, bool) {
-    if x.0.cnt == 0 { (Type { cnt: 0 }, false) } else { panic!("No matching unary operator {:?}! Operand is {:?}", op, x) }
+    match op {
+        UnaryOp::Ref => {
+            unreachable!();
+        }
+        UnaryOp::Deref => {
+            if x.0.cnt == 0 { panic!("Type {} cannot be dereferenced!", x.0) }
+            return (Type { cnt: x.0.cnt - 1 }, true)
+        }
+        _ => {
+            if x.0.cnt == 0 { return (Type { cnt: 0 }, false) }
+            panic!("No matching unary operator {:?}! Operand is {}", op, x.0)
+        }
+    }
 }
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum BinaryOp {

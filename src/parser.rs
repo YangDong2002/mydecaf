@@ -52,6 +52,7 @@ priority = [
 '<' = 'Lt'
 '\|\|' = 'LOr'
 '&&' = 'LAnd'
+'&' = 'And'
 '\+' = 'Add'
 '-' = 'Sub'
 '\*' = 'Mul'
@@ -76,6 +77,8 @@ impl<'p> Parser {
     fn prog_empty() -> Prog<'p> { Prog { contents: vec![] } }
     #[rule = "Type -> Int"]
     fn type_int(_: Token) -> Type { Type { cnt: 0 } }
+    #[rule = "Type -> Type Mul"]
+    fn type_pointer(t: Type, _: Token) -> Type { Type { cnt: t.cnt + 1 } }
     #[rule = "Func -> Type Id LPar Params RPar Compound"]
     fn func_impl(typ: Type, name: Token, _lp: Token, params: Vec<Declaration<'p>>, _rp: Token, stmts: Vec<BlockItem<'p>>) -> Func<'p> {
         Func { name: name.str(), params, stmts: Some(stmts), ret: typ }
@@ -242,6 +245,12 @@ impl<'p> Parser {
     fn unary_bnot(_: Token, u: Unary<'p>) -> Unary<'p> {
         Unary::Uop(UnaryOp::UBNot, Box::new(u))
     }
+    #[rule = "Unary -> Mul Unary"]
+    fn unary_deref(_: Token, u: Unary<'p>) -> Unary<'p> { Unary::Uop(UnaryOp::Deref, Box::new(u)) }
+    #[rule = "Unary -> And Unary"]
+    fn unary_ref(_: Token, u: Unary<'p>) -> Unary<'p> { Unary::Uop(UnaryOp::Ref, Box::new(u)) }
+    #[rule = "Unary -> LPar Type RPar Unary"]
+    fn unary_conversion(_lp: Token, typ: Type, _rp: Token, u: Unary<'p>) -> Unary<'p> { Unary::ExplicitConversion(typ, Box::new(u)) }
     #[rule = "Primary -> IntConst"]
     fn prim_int(i: Token) -> Primary<'p> {
         Primary::Int(i.parse(), std::marker::PhantomData)

@@ -42,10 +42,12 @@ pub fn write_func(f: &IrFunc, w: &mut impl Write) -> Result<()> {
             }
             IrStmt::Unary(op) => {
                 writeln!(w, "  lw t0, 0(sp)")?;
-                writeln!(w, "  {} t0, t0", match op {
-                    UNeg => "neg",
-                    UNot => "seqz",
-                    UBNot => "not"
+                writeln!(w, "  {}", match op {
+                    UNeg => "neg t0, t0",
+                    UNot => "seqz t0, t0",
+                    UBNot => "not t0, t0",
+                    Deref => "lw t0, 0(t0)",
+                    Ref => { unreachable!(); }
                 })?;
                 writeln!(w, "  sw t0, 0(sp)")?;
             }
