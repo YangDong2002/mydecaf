@@ -7,7 +7,7 @@ pub fn write_asm(p: &IrProg, w: &mut impl Write) -> Result<()> {
         writeln!(w, "    .data")?;
         writeln!(w, "    .globl {}", name)?;
         writeln!(w, "    .align 4")?;
-        writeln!(w, "    .size {}, {}", name, siz)?;
+        writeln!(w, "    .size {}, {}", name, siz * 4)?;
         writeln!(w, "{}:", name)?;
         writeln!(w, "    .word {}\n", val)?;
     }

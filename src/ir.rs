@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use crate::ast::*;
 use crate::consteval::const_expr;
 
+const MAXSIZE: usize = 10000000;
+
 #[derive(Debug)]
 pub struct IrProg<'a> {
     pub funcs: Vec<IrFunc<'a>>,
@@ -33,7 +35,7 @@ impl FunctionSignature {
     pub fn from(f: &Func) -> FunctionSignature {
         FunctionSignature {
             ret: f.ret.clone(),
-            args: f.params.iter().map(|x| x.typ.clone()).collect(),
+            args: f.params.iter().rev().map(|x| x.typ.clone()).collect(),
         }
     }
 }
@@ -42,6 +44,7 @@ impl FunctionSignature {
 pub struct VarInfo {
     pub addr: i32,
     pub typ: Type,
+    pub siz: usize,
 }
 
 #[derive(Debug)]
@@ -131,6 +134,8 @@ pub fn ast2ir<'a>(p: &'a Prog<'a>) -> IrProg<'a> {
             }
             FuncDecl::Decl(d) => {
                 if ctx.globals.contains_key(d.name) { panic!("Redefinition of global variable {}", d.name) }
+                let siz: usize = d.typ.dim.iter().product();
+                if siz >= MAXSIZE { panic!("Global array size {} is too big!!! {}", siz, d.typ); }
                 match &d.val {
                     None => {
                         ctx.globals.insert(d.name, NameStatus::Var(d.typ.clone()));
@@ -158,7 +163,7 @@ fn func<'a>(f: &Func<'a>, ctx: &mut Context<'a>) -> IrFunc<'a> {
         if args.contains_key(decl.name) {
             panic!("Argument name {} appears twice in function {}", decl.name, f.name);
         }
-        args.insert(decl.name, VarInfo { addr: -(id as i32) - 1, typ: decl.typ.clone() });
+        args.insert(decl.name, VarInfo { addr: -(id as i32) - 1, typ: decl.typ.clone(), siz: 1 });
     }
     ctx.vars.push(args);
     let locals: u32 = compound(&mut stmts, ctx, f.stmts.as_ref().unwrap(), &f.ret);
@@ -284,8 +289,11 @@ fn compound<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, com: &Vec<BlockI
                 } else if ctx.vars.len() == 2 && ctx.vars[0].contains_key(e.name) {
                     panic!("Variable {} is defined as function parameter", e.name);
                 } else {
-                    ctx.vars.last_mut().unwrap().insert(e.name, VarInfo { addr: ctx.depth as i32, typ: e.typ.clone() });
-                    ctx.depth += 1;
+                    if e.typ.dim.iter().any(|x| *x == 0) { panic!("Bad array size {}!", e.typ) }
+                    let siz = e.typ.dim.iter().product();
+                    if siz > MAXSIZE { panic!("Array size {} is too big!! {}!", siz, e.typ); }
+                    ctx.vars.last_mut().unwrap().insert(e.name, VarInfo { addr: ctx.depth as i32, typ: e.typ.clone(), siz });
+                    ctx.depth += siz as u32;
                     if let Some(x) = &e.val {
                         assert_eq!(e.typ.dim, vec![]);
                         let rhs_type = expr(stmts, ctx, &x, false);
@@ -299,7 +307,7 @@ fn compound<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, com: &Vec<BlockI
             }
         }
     }
-    ctx.depth -= ctx.vars.last().unwrap().len() as u32;
+    ctx.depth -= ctx.vars.last().unwrap().iter().fold(0, |x, (_, info)| x + info.siz) as u32;
     ctx.vars.pop();
     max_depth
 }
@@ -400,11 +408,39 @@ fn additive<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, a: &Additive, lv
     match a {
         Additive::Mul(m) => { multiplicative(stmts, ctx, m, lvalue) }
         Additive::Bop(a, op, b) => {
-            let x = additive(stmts, ctx, &**a, lvalue);
-            let y = multiplicative(stmts, ctx, b, lvalue);
-            stmts.push(IrStmt::Binary(*op));
-            let (typ, rv) = binary_operation(*op, (x, lvalue), (y, lvalue));
+            let mut lhs: Vec<IrStmt> = Vec::new();
+            let mut rhs: Vec<IrStmt> = Vec::new();
+            let x = additive(&mut lhs, ctx, &**a, lvalue);
+            let y = multiplicative(&mut rhs, ctx, b, lvalue);
+            let (typ, rv) = binary_operation(*op, (x.clone(), lvalue), (y.clone(), lvalue));
             if rv < lvalue { panic!("Binary expression {:?} cannot be used as a lvalue!", a); }
+
+            if x == SCALAR && y == SCALAR {
+                stmts.append(&mut lhs);
+                stmts.append(&mut rhs);
+                stmts.push(IrStmt::Binary(*op));
+            } else if x != SCALAR && y == SCALAR {
+                stmts.append(&mut rhs);
+                stmts.append(&mut lhs);
+                stmts.push(IrStmt::Const(4));
+                stmts.push(IrStmt::Binary(BinaryOp::Mul));
+                stmts.push(IrStmt::Binary(*op));
+            } else if x == SCALAR && y != SCALAR && *op == BinaryOp::Add {
+                stmts.append(&mut lhs);
+                stmts.append(&mut rhs);
+                stmts.push(IrStmt::Const(4));
+                stmts.push(IrStmt::Binary(BinaryOp::Mul));
+                stmts.push(IrStmt::Binary(BinaryOp::Add));
+            } else if x == y && *op == BinaryOp::Sub {
+                stmts.append(&mut lhs);
+                stmts.append(&mut rhs);
+                stmts.push(IrStmt::Binary(BinaryOp::Sub));
+                stmts.push(IrStmt::Const(4));
+                stmts.push(IrStmt::Binary(BinaryOp::Div));
+            } else {
+                panic!("{} {} {:?}", x, y, op);
+                unreachable!()
+            }
             typ
         }
     }
@@ -465,13 +501,12 @@ fn unary<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, u: &Unary, lvalue: 
         }
         Unary::ExplicitConversion(typ, x) => {
             let old_type = unary(stmts, ctx, x, lvalue);
-            if old_type.dim.len() != 0 { panic!("Cannot convert arrays to other types.") }
             typ.clone()
         }
         Unary::Index(x, idx) => {
             let array = unary(stmts, ctx, x, false);
             let index = expr(stmts, ctx, idx, false);
-            if index.dim.len() > 0 { panic!("Indexing using an array! {:?}", u) }
+            if index != SCALAR { panic!("Indexing using an array/pointer! {:?}", u) }
             if array == SCALAR { panic!("Indexing a scalar value! {:?}", u) }
             let rv = array.dim.len() <= 1;
             if rv < lvalue { panic!("Trying to use {:?} as a lvalue!", u) }
@@ -503,7 +538,7 @@ fn primary<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, p: &Primary, lval
             match ctx.name_resolution(name) {
                 Some((ir, typ)) => {
                     stmts.push(ir);
-                    if !lvalue { stmts.push(IrStmt::Load); }
+                    if !lvalue && typ.dim.len() == 0 { stmts.push(IrStmt::Load); }
                     typ
                 }
                 None => {

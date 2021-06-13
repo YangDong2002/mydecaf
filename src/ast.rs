@@ -169,6 +169,9 @@ pub fn binary_operation(op: BinaryOp, x: (Type, bool), y: (Type, bool)) -> (Type
     if x.0.dim.len() > 0 || y.0.dim.len() > 0 {
         panic!("No matching binary operator {:?}! Operands are {:?} and {:?}", op, x, y);
     }
+    if x.0 == SCALAR && op == BinaryOp::Add { return y; }
+    if y.0 == SCALAR && (op == BinaryOp::Add || op == BinaryOp::Sub) { return x; }
+    if x.0 == y.0 && op == BinaryOp::Sub { return (SCALAR, false); }
     if (op == BinaryOp::Eqt || op == BinaryOp::Neq) && x.0.cnt == y.0.cnt { return (SCALAR, false); }
     panic!("No matching binary operator {:?}! Operands are {:?} and {:?}", op, x, y)
 }
