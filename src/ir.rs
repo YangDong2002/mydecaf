@@ -506,12 +506,13 @@ fn unary<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, u: &Unary, lvalue: 
         Unary::Index(x, idx) => {
             let array = unary(stmts, ctx, x, false);
             let index = expr(stmts, ctx, idx, false);
+            eprintln!("{} {} {:?}", array, index, u);
             if index != SCALAR { panic!("Indexing using an array/pointer! {:?}", u) }
             if array == SCALAR { panic!("Indexing a scalar value! {:?}", u) }
             let rv = array.dim.len() <= 1;
             if rv < lvalue { panic!("Trying to use {:?} as a lvalue!", u) }
             let (new_type, siz) = if array.dim.len() == 0 {
-                (Type { cnt: array.cnt - 1, dim: vec![] }, 4)
+                (Type { cnt: array.cnt - 1, dim: vec![] }, 1)
             } else {
                 (Type { cnt: array.cnt, dim: array.dim[1..].to_vec() }, array.dim[1..].to_vec().iter().product())
             };
