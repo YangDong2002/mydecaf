@@ -292,8 +292,8 @@ fn compound<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, com: &Vec<BlockI
                     if e.typ.dim.iter().any(|x| *x == 0) { panic!("Bad array size {}!", e.typ) }
                     let siz = e.typ.dim.iter().product();
                     if siz > MAXSIZE { panic!("Array size {} is too big!! {}!", siz, e.typ); }
-                    ctx.vars.last_mut().unwrap().insert(e.name, VarInfo { addr: ctx.depth as i32, typ: e.typ.clone(), siz });
                     ctx.depth += siz as u32;
+                    ctx.vars.last_mut().unwrap().insert(e.name, VarInfo { addr: (ctx.depth - 1) as i32, typ: e.typ.clone(), siz });
                     if let Some(x) = &e.val {
                         assert_eq!(e.typ.dim, vec![]);
                         let rhs_type = expr(stmts, ctx, &x, false);
