@@ -10,7 +10,7 @@ pub fn write_asm(p: &IrProg, w: &mut impl Write) -> Result<()> {
         if *siz > 1 {
             assert_eq!(*val, 0);
             writeln!(w, "{}:", name)?;
-            writeln!(w, "    .zero {}", val)?;
+            writeln!(w, "    .zero {}", siz * 4)?;
         } else {
             writeln!(w, "    .size {}, {}", name, siz * 4)?;
             writeln!(w, "{}:", name)?;
