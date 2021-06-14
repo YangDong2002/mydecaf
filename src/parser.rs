@@ -17,6 +17,7 @@ fn add_box<T>(x: Option<T>) -> Option<Box<T>> {
 }
 
 #[parser_macros::lalr1(Prog)]
+#[expand]
 #[lex = r#"
 priority = [
     { assoc = 'left', terms = ['Add', 'Sub'] },

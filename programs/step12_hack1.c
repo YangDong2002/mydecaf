@@ -1,14 +1,43 @@
+int a[10];
+int k;
+
 int main() {
-    int a[3][4][5][6];
-    int *p = (int *) a[1];
-    int *q = (int *) a[1][2];
-    int *r = (int *) a[1][2][3];
-    int *s = &a[1][2][3][4];
-    a[1][2][3][4] = 2333;
-    a[1][2][0][3] = 3332;
-    if (&((int **) a[1][2])[3][4] != (int *) q[3] + 4) return 7;
-    if (1 * 4 * 5 * 6 + (int *) a + 2 * 5 * 6 != s - 3 * 6 - 4) return 8;
-    if (-4 + s - (int *) a != ((1 * 4 + 2) * 5 + 3) * 6) return 9;
-    if ((s - r) + (r - q) + (q - p) != s - p) return 10;
+    k = 0;
+    while (k < 10) {
+        a[k] = k;
+        k = k + 1;
+    }
+
+    int *b[10];
+    k = 0;
+    while (k < 10) {
+        b[k] = &a[k];
+        k = k + 1;
+    }
+    int **cb = (int **) b;
+    int **c[10];
+
+    k = 0;
+    while (k < 10) {
+        for (int i = 0; i + k < 10; i = i + 1) {
+            if (cb[k][i] != k + i)
+                return 100 + k * 10 + i;
+        }
+        k = k + 1;
+    }
+
+    k = 0;
+    while (k < 10) {
+        c[k] = cb;
+        cb = cb + 1;
+        k = k + 1;
+    }
+
+    k = 0;
+    while (k < 10) {
+        if (**c[k] != a[k])
+            return 1;
+        k = k + 1;
+    }
     return 0;
 }
