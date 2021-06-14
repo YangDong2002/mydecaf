@@ -7,9 +7,15 @@ pub fn write_asm(p: &IrProg, w: &mut impl Write) -> Result<()> {
         writeln!(w, "    .data")?;
         writeln!(w, "    .globl {}", name)?;
         writeln!(w, "    .align 4")?;
-        writeln!(w, "    .size {}, {}", name, siz * 4)?;
-        writeln!(w, "{}:", name)?;
-        writeln!(w, "    .word {}\n", val)?;
+        if siz > 1 {
+            assert_eq!(val, 0);
+            writeln!(w, "{}:", name)?;
+            writeln!(w, "    .zero {}", val)?;
+        } else {
+            writeln!(w, "    .size {}, {}", name, siz * 4)?;
+            writeln!(w, "{}:", name)?;
+            writeln!(w, "    .word {}\n", val)?;
+        }
     }
     writeln!(w, "    .text")?;
     for f in &p.funcs {
