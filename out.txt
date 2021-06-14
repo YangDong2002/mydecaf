@@ -1,0 +1,617 @@
+    .data
+    .globl a
+    .align 4
+    .size a, 400
+a:
+    .word 0
+
+    .text
+.global main
+main:
+  addi sp, sp, -12
+  sw ra, 8(sp)
+  sw fp, 4(sp)
+  addi fp, sp, 12
+  # GlobalAddr("a")
+  addi sp, sp, -4
+  la t1, a
+  sw t1, 0(sp)
+  # Const(0)
+  li t0, 0
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Const(4)
+  li t0, 4
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Binary(Mul)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  mul t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Binary(Add)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  add t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # FrameAddr(0)
+  addi t0, fp, -12
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Store
+  lw t0, 0(sp)
+  lw t1, 4(sp)
+  sw t1, 0(t0)
+  addi sp, sp, 4
+  # Pop
+  addi sp, sp, 4
+  # Const(1)
+  li t0, 1
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # FrameAddr(0)
+  addi t0, fp, -12
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Load
+  lw t0, 0(sp)
+  lw t1, 0(t0)
+  sw t1, 0(sp)
+  # Const(0)
+  li t0, 0
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Const(4)
+  li t0, 4
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Binary(Mul)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  mul t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Binary(Add)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  add t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Store
+  lw t0, 0(sp)
+  lw t1, 4(sp)
+  sw t1, 0(t0)
+  addi sp, sp, 4
+  # Pop
+  addi sp, sp, 4
+  # Const(2)
+  li t0, 2
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # FrameAddr(0)
+  addi t0, fp, -12
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Load
+  lw t0, 0(sp)
+  lw t1, 0(t0)
+  sw t1, 0(sp)
+  # Const(1)
+  li t0, 1
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Const(4)
+  li t0, 4
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Binary(Mul)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  mul t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Binary(Add)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  add t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Const(0)
+  li t0, 0
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Const(4)
+  li t0, 4
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Binary(Mul)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  mul t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Binary(Add)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  add t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Store
+  lw t0, 0(sp)
+  lw t1, 4(sp)
+  sw t1, 0(t0)
+  addi sp, sp, 4
+  # Pop
+  addi sp, sp, 4
+  # Const(3)
+  li t0, 3
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # FrameAddr(0)
+  addi t0, fp, -12
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Load
+  lw t0, 0(sp)
+  lw t1, 0(t0)
+  sw t1, 0(sp)
+  # Const(2)
+  li t0, 2
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Const(4)
+  li t0, 4
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Binary(Mul)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  mul t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Binary(Add)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  add t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Const(0)
+  li t0, 0
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Const(4)
+  li t0, 4
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Binary(Mul)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  mul t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Binary(Add)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  add t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Store
+  lw t0, 0(sp)
+  lw t1, 4(sp)
+  sw t1, 0(t0)
+  addi sp, sp, 4
+  # Pop
+  addi sp, sp, 4
+  # Const(4)
+  li t0, 4
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # FrameAddr(0)
+  addi t0, fp, -12
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Load
+  lw t0, 0(sp)
+  lw t1, 0(t0)
+  sw t1, 0(sp)
+  # Const(8)
+  li t0, 8
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Binary(Add)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  add t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Const(1)
+  li t0, 1
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Const(4)
+  li t0, 4
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Binary(Mul)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  mul t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Binary(Add)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  add t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Store
+  lw t0, 0(sp)
+  lw t1, 4(sp)
+  sw t1, 0(t0)
+  addi sp, sp, 4
+  # Pop
+  addi sp, sp, 4
+  # FrameAddr(0)
+  addi t0, fp, -12
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Load
+  lw t0, 0(sp)
+  lw t1, 0(t0)
+  sw t1, 0(sp)
+  # Const(1)
+  li t0, 1
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Const(4)
+  li t0, 4
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Binary(Mul)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  mul t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Binary(Add)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  add t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Const(1)
+  li t0, 1
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Const(4)
+  li t0, 4
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Binary(Mul)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  mul t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Binary(Add)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  add t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Const(1)
+  li t0, 1
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Const(4)
+  li t0, 4
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Binary(Mul)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  mul t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Binary(Add)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  add t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Load
+  lw t0, 0(sp)
+  lw t1, 0(t0)
+  sw t1, 0(sp)
+  # Const(1)
+  li t0, 1
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Binary(Add)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  add t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # GlobalAddr("a")
+  addi sp, sp, -4
+  la t1, a
+  sw t1, 0(sp)
+  # Const(10)
+  li t0, 10
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Const(4)
+  li t0, 4
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Binary(Mul)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  mul t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Binary(Add)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  add t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Const(4)
+  li t0, 4
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Const(8)
+  li t0, 8
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Binary(Mul)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  mul t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Binary(Sub)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  sub t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Const(2)
+  li t0, 2
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Const(4)
+  li t0, 4
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Binary(Mul)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  mul t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Binary(Add)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  add t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Store
+  lw t0, 0(sp)
+  lw t1, 4(sp)
+  sw t1, 0(t0)
+  addi sp, sp, 4
+  # Pop
+  addi sp, sp, 4
+  # GlobalAddr("a")
+  addi sp, sp, -4
+  la t1, a
+  sw t1, 0(sp)
+  # Const(0)
+  li t0, 0
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Const(4)
+  li t0, 4
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Binary(Mul)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  mul t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Binary(Add)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  add t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Load
+  lw t0, 0(sp)
+  lw t1, 0(t0)
+  sw t1, 0(sp)
+  # GlobalAddr("a")
+  addi sp, sp, -4
+  la t1, a
+  sw t1, 0(sp)
+  # Const(1)
+  li t0, 1
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Const(4)
+  li t0, 4
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Binary(Mul)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  mul t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Binary(Add)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  add t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Load
+  lw t0, 0(sp)
+  lw t1, 0(t0)
+  sw t1, 0(sp)
+  # Binary(Add)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  add t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # GlobalAddr("a")
+  addi sp, sp, -4
+  la t1, a
+  sw t1, 0(sp)
+  # Const(2)
+  li t0, 2
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Const(4)
+  li t0, 4
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Binary(Mul)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  mul t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Binary(Add)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  add t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Load
+  lw t0, 0(sp)
+  lw t1, 0(t0)
+  sw t1, 0(sp)
+  # Binary(Add)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  add t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # GlobalAddr("a")
+  addi sp, sp, -4
+  la t1, a
+  sw t1, 0(sp)
+  # Const(3)
+  li t0, 3
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Const(4)
+  li t0, 4
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Binary(Mul)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  mul t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Binary(Add)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  add t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Load
+  lw t0, 0(sp)
+  lw t1, 0(t0)
+  sw t1, 0(sp)
+  # Binary(Add)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  add t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # GlobalAddr("a")
+  addi sp, sp, -4
+  la t1, a
+  sw t1, 0(sp)
+  # Const(4)
+  li t0, 4
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Const(4)
+  li t0, 4
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Binary(Mul)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  mul t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Binary(Add)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  add t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Load
+  lw t0, 0(sp)
+  lw t1, 0(t0)
+  sw t1, 0(sp)
+  # Binary(Add)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  add t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # GlobalAddr("a")
+  addi sp, sp, -4
+  la t1, a
+  sw t1, 0(sp)
+  # Const(5)
+  li t0, 5
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Const(4)
+  li t0, 4
+  addi sp, sp, -4
+  sw t0, 0(sp)
+  # Binary(Mul)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  mul t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Binary(Add)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  add t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Load
+  lw t0, 0(sp)
+  lw t1, 0(t0)
+  sw t1, 0(sp)
+  # Binary(Add)
+  lw t1, 4(sp)
+  lw t2, 0(sp)
+  add t1, t1, t2
+  addi sp, sp, 4
+  sw t1, 0(sp)
+  # Ret
+  j main_epilogue
+  addi sp, sp, -4
+  sw x0, 0(sp)
+main_epilogue:
+  lw a0, 0(sp)
+  addi sp, sp, 4
+  lw fp, 4(sp)
+  lw ra, 8(sp)
+  addi sp, sp, 12
+  jr ra
