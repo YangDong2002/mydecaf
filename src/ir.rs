@@ -438,8 +438,7 @@ fn additive<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, a: &Additive, lv
                 stmts.push(IrStmt::Const(4));
                 stmts.push(IrStmt::Binary(BinaryOp::Div));
             } else {
-                panic!("{} {} {:?}", x, y, op);
-                unreachable!()
+                unreachable!();
             }
             typ
         }
@@ -500,7 +499,7 @@ fn unary<'a>(stmts: &mut Vec<IrStmt>, ctx: &mut Context<'a>, u: &Unary, lvalue: 
             }
         }
         Unary::ExplicitConversion(typ, x) => {
-            let old_type = unary(stmts, ctx, x, lvalue);
+            unary(stmts, ctx, x, lvalue);
             typ.clone()
         }
         Unary::Index(x, idx) => {
