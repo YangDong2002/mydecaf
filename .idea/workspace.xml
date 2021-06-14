@@ -12,11 +12,12 @@
     <cargoProject FILE="$PROJECT_DIR$/Cargo.toml" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="9e896d9c-b00e-4a9f-86fd-46caf03dfd6a" name="Default Changelist" comment="Step 12.g swapped lhs, rhs...">
-      <change afterPath="$PROJECT_DIR$/src/mparser.rs" afterDir="false" />
+    <list default="true" id="9e896d9c-b00e-4a9f-86fd-46caf03dfd6a" name="Default Changelist" comment="Step 12.h ???">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/programs/step12_hack1.c" beforeDir="false" afterPath="$PROJECT_DIR$/programs/step12_hack1.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/parser.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/parser.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Cargo.lock" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/mparser.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/mparser.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -262,7 +263,7 @@
       <workItem from="1620398586957" duration="235000" />
       <workItem from="1620398835153" duration="8974000" />
       <workItem from="1623377780732" duration="4531000" />
-      <workItem from="1623501791864" duration="46919000" />
+      <workItem from="1623501791864" duration="47135000" />
     </task>
     <task id="LOCAL-00001" summary="Start using CLion &amp; Code reformatting">
       <created>1620385898512</created>
@@ -530,7 +531,14 @@
       <option name="project" value="LOCAL" />
       <updated>1623589875697</updated>
     </task>
-    <option name="localTasksCounter" value="39" />
+    <task id="LOCAL-00039" summary="Step 12.h ???">
+      <created>1623639908173</created>
+      <option name="number" value="00039" />
+      <option name="presentableId" value="LOCAL-00039" />
+      <option name="project" value="LOCAL" />
+      <updated>1623639908173</updated>
+    </task>
+    <option name="localTasksCounter" value="40" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -553,7 +561,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="CHECK_CODE_CLEANUP_BEFORE_PROJECT_COMMIT" value="true" />
-    <MESSAGE value="Step 8 fix #2" />
     <MESSAGE value="Step 8 fix #3" />
     <MESSAGE value="Step 8 fix #4" />
     <MESSAGE value="Step 8 fix #5" />
@@ -578,7 +585,8 @@
     <MESSAGE value="Step 12.e fix a tiny bug (4-&gt;1)" />
     <MESSAGE value="Step 12.f changed array initial position on stack. e.g. &amp;a[0][0][0] in a[2][3][4] is now in FrameAddress(23) instead of FrameAddress(0)" />
     <MESSAGE value="Step 12.g swapped lhs, rhs..." />
-    <option name="LAST_COMMIT_MESSAGE" value="Step 12.g swapped lhs, rhs..." />
+    <MESSAGE value="Step 12.h ???" />
+    <option name="LAST_COMMIT_MESSAGE" value="Step 12.h ???" />
     <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REFORMAT_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REARRANGE_BEFORE_PROJECT_COMMIT" value="true" />

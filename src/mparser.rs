@@ -1,3 +1,22 @@
+use crate::ast::*;
+
+pub struct Parser;
+
+impl<'p> Token<'p> {
+    fn str(&self) -> &'p str { std::str::from_utf8(self.piece).unwrap() }
+    fn parse<T>(&self) -> T where T: std::str::FromStr, <T as std::str::FromStr>::Err: std::fmt::Debug {
+        self.str().parse().expect(&format!("(line {}, col {}) ", self.line, self.col))
+    }
+}
+
+fn add_box<T>(x: Option<T>) -> Option<Box<T>> {
+    match x {
+        Some(u) => { Some(Box::new(u)) }
+        None => { None }
+    }
+}
+
+
 macro_rules! index { ($arr: expr, $idx: expr) => { &$arr[$idx] }; } macro_rules! impossible { () => { unreachable!() }; }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
