@@ -1,13 +1,19 @@
 # MyDecaf: A Simple MiniDecaf Compiler
 
-`MyDecaf` is a compiler written in Rust. It can translate a programming language similar to C, called `minidecaf`, into
+`MyDecaf` is a compiler written in Rust from scratch. It can translate a programming language similar to C, called `minidecaf`, into
 RISCV assembly (runnable in QEMU).
 
-This follows the [tutorial](https://decaf-lang.github.io/minidecaf-tutorial/) from Tsinghua University 2020 Compiler
+The development process follows the [tutorial](https://decaf-lang.github.io/minidecaf-tutorial/) from Tsinghua University 2020 Compiler
 course. The parser (`src/mparser.rs`) is generated from https://github.com/MashPlant/lalr1. The compiler passed all
 the [testcases](https://github.com/decaf-lang/minidecaf-tests) in the course material.
 
+## Testing
+
+See https://github.com/decaf-lang/minidecaf-tests
+
 ## Features
+
+For more details about language specification, see https://decaf-lang.github.io/minidecaf-tutorial/
 
 - Unary, binary arithmetic and logical expressions
 - Local & Global variables
@@ -17,6 +23,8 @@ the [testcases](https://github.com/decaf-lang/minidecaf-tests) in the course mat
 - Arrays, pointers, arrays of pointers (but no pointer to arrays)
 - Lvalue & rvalue inference
 - Type checking
+
+Besides the language specification, the compiler additionally implemented the optimization to evaluate constant expressions at compile time.
 
 For example, it supports the following quicksort testing code:
 
@@ -77,7 +85,7 @@ int main() {
 }
 ```
 
-## Grammar
+## Grammar Specification
 
 ```asm
 program
@@ -173,7 +181,7 @@ lvalue rule & type checking rule: See [tutorial](https://decaf-lang.github.io/mi
 
 ## Setting up the environment
 
-As environment configuration is not mentioned in the tutorial, and it is really boring and wasted me a lot of time, I
+As environment configuration is not mentioned in the tutorial, and it is tedious and can be time-consuming, I
 will briefly summarize the steps below. I work on a Google Cloud server with 8-core CPU, 32 GB Memory, 100 GB SSD,
 Ubuntu 20.04.
 
